@@ -1,6 +1,6 @@
 import { $ } from "bun";
-import { homedir } from "os";
 import { readFile } from "fs/promises";
+import { homedir } from "os";
 
 export async function setupClaudeCodeSettings(
   settingsInput?: string,

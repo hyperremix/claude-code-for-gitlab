@@ -1,0 +1,49 @@
+# Docker Compose setup for LiteLLM Proxy Server
+# This example shows how to run a LiteLLM proxy server alongside your application
+
+version: "3.8"
+
+services:
+  # LiteLLM Proxy Server
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    environment:
+      # Master key for authentication
+      - LITELLM_MASTER_KEY=your-secret-master-key
+      # Enable logging
+      - LITELLM_LOG=INFO
+      # Database for usage tracking (optional)
+      - DATABASE_URL=postgresql://user:password@postgres:5432/litellm
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command: --config /app/config.yaml --port 4000 --num_workers 1
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # PostgreSQL database for LiteLLM (optional but recommended for production)
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=litellm
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Your application that uses Claude Code
+  app:
+    build: .
+    environment:
+      # Configure to use the LiteLLM proxy
+      - ANTHROPIC_BASE_URL=http://litellm-proxy:4000
+      - ANTHROPIC_API_KEY=your-secret-master-key
+    depends_on:
+      - litellm-proxy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

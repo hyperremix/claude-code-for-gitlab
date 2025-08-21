@@ -1,0 +1,96 @@
+# LiteLLM Proxy Configuration File
+# This configuration enables multiple AI providers through a single proxy endpoint
+
+model_list:
+  # Anthropic Models
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-5-haiku-20241022
+    litellm_params:
+      model: claude-3-5-haiku-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # OpenAI Models
+  - model_name: gpt-4o
+    litellm_params:
+      model: gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  # Azure OpenAI Models
+  - model_name: azure/gpt-4o-mini
+    litellm_params:
+      model: azure/gpt-4o-mini
+      api_key: os.environ/AZURE_API_KEY
+      api_base: os.environ/AZURE_API_BASE
+      api_version: "2024-02-15-preview"
+
+  # Google Gemini Models
+  - model_name: gemini/gemini-1.5-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+
+  # AWS Bedrock Models
+  - model_name: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+    litellm_params:
+      model: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+      aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
+      aws_secret_access_key: os.environ/AWS_SECRET_ACCESS_KEY
+      aws_region_name: os.environ/AWS_REGION
+
+# Routing Configuration
+router_settings:
+  # Model fallback strategy
+  fallbacks:
+    - claude-3-5-sonnet-20241022: ["gpt-4o", "gemini/gemini-1.5-pro"]
+    - gpt-4o-mini: ["claude-3-5-haiku-20241022"]
+
+  # Load balancing for high availability
+  model_group_alias:
+    gpt-4-class: ["gpt-4o", "claude-3-5-sonnet-20241022"]
+    fast-models: ["gpt-4o-mini", "claude-3-5-haiku-20241022"]
+
+# General Settings
+general_settings:
+  # Enable detailed logging
+  set_verbose: true
+
+  # Master key for authentication
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+  # Enable usage tracking
+  store_model_in_db: true
+
+  # Enable caching for better performance
+  cache:
+    type: "redis"
+    host: "redis"
+    port: 6379
+
+  # Rate limiting
+  max_budget: 1000.0 # Monthly budget in USD
+  budget_duration: "1mo"
+
+  # Model-specific settings
+  model_max_budget:
+    "claude-3-5-sonnet-20241022": 500.0
+    "gpt-4o": 300.0
+    "gpt-4o-mini": 50.0
+
+# Health check endpoints
+litellm_settings:
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+
+  # Custom headers for requests
+  headers:
+    "X-LiteLLM-Proxy": "true"
+    "X-Powered-By": "LiteLLM"

@@ -120,9 +120,10 @@ Add the following to your workflow file:
 
 The following environment variables can be used to configure the action:
 
-| Variable       | Description                                           | Default |
-| -------------- | ----------------------------------------------------- | ------- |
-| `NODE_VERSION` | Node.js version to use (e.g., '18.x', '20.x', '22.x') | '18.x'  |
+| Variable                  | Description                                                                                    | Default |
+| ------------------------- | ---------------------------------------------------------------------------------------------- | ------- |
+| `NODE_VERSION`            | Node.js version to use (e.g., '18.x', '20.x', '22.x')                                          | '18.x'  |
+| `ANTHROPIC_BASE_URL`      | Base URL for Anthropic API or LiteLLM proxy (enables LiteLLM proxy support when non-Anthropic) | ''      |
 
 Example usage:
 
@@ -157,7 +158,7 @@ The `claude_env` input accepts YAML multiline format with key-value pairs:
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-### Features:
+### Features
 
 - **YAML Format**: Use standard YAML key-value syntax (`KEY: value`)
 - **Multiline Support**: Define multiple environment variables in a single input
@@ -165,7 +166,7 @@ The `claude_env` input accepts YAML multiline format with key-value pairs:
 - **GitHub Secrets**: Can reference GitHub secrets using `${{ secrets.SECRET_NAME }}`
 - **Runtime Access**: Environment variables are available to Claude during execution
 
-### Example Use Cases:
+### Example Use Cases
 
 ```yaml
 # Development configuration
@@ -482,6 +483,150 @@ This example shows how to use OIDC authentication with GCP Vertex AI:
     allowed_tools: "Bash(git:*),View,GlobTool,GrepTool,BatchTool"
 ```
 
+## LiteLLM Proxy Support
+
+Claude Code Base Action now supports transparent routing through LiteLLM proxy servers, enabling access to alternative model providers while maintaining full compatibility with the existing Anthropic API integration.
+
+### What is LiteLLM Proxy?
+
+[LiteLLM](https://github.com/BerriAI/litellm) is a proxy server that provides a unified interface to 100+ LLMs, including OpenAI, Azure OpenAI, AWS Bedrock, Google Vertex AI, Anthropic, and more. It translates incoming requests to the format expected by each provider while maintaining a consistent API interface.
+
+### Enabling LiteLLM Proxy Support
+
+To use LiteLLM proxy with Claude Code, simply set the `ANTHROPIC_BASE_URL` environment variable to your LiteLLM proxy endpoint. The action automatically detects LiteLLM proxy usage when the base URL points to a non-Anthropic domain.
+
+```yaml
+- name: Run Claude Code with LiteLLM Proxy
+  uses: anthropics/claude-code-base-action@beta
+  env:
+    ANTHROPIC_BASE_URL: "http://localhost:4000" # Your LiteLLM proxy URL
+  with:
+    prompt: "Analyze this codebase and suggest improvements"
+    model: "claude-3-5-sonnet-20241022" # Primary model
+    allowed_tools: "Bash(git:*),View,GlobTool,GrepTool,BatchTool"
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }} # Still required for authentication
+```
+
+### Configuration Options
+
+When using LiteLLM proxy, you have access to these additional configuration options:
+
+| Environment Variable      | Description                                                       | Example                 |
+| ------------------------- | ----------------------------------------------------------------- | ----------------------- |
+| `ANTHROPIC_BASE_URL`      | LiteLLM proxy server URL (automatically enables proxy mode)       | `http://localhost:4000` |
+
+### Authentication
+
+Even when using LiteLLM proxy, you still need to provide authentication via `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN`. The LiteLLM proxy server handles the translation to the target provider's authentication format.
+
+### Example: Multi-Provider Setup
+
+```yaml
+# Example: Using different providers through LiteLLM proxy
+- name: Run Claude Code with OpenAI via LiteLLM
+  uses: anthropics/claude-code-base-action@beta
+  env:
+    ANTHROPIC_BASE_URL: "https://your-litellm-server.com"
+  with:
+    prompt: "Review this pull request for security issues"
+    model: "gpt-4o"
+    fallback_model: "claude-3-5-sonnet-20241022"
+    allowed_tools: "Bash(git:*),View,GlobTool,GrepTool,BatchTool"
+    anthropic_api_key: ${{ secrets.LITELLM_API_KEY }}
+
+# Example: Using Azure OpenAI via LiteLLM
+- name: Run Claude Code with Azure OpenAI via LiteLLM
+  uses: anthropics/claude-code-base-action@beta
+  env:
+    ANTHROPIC_BASE_URL: "https://your-litellm-server.com"
+  with:
+    prompt: "Generate unit tests for the new features"
+    model: "azure/gpt-4o"
+    allowed_tools: "Bash(git:*),View,GlobTool,GrepTool,Write"
+    anthropic_api_key: ${{ secrets.LITELLM_API_KEY }}
+```
+
+### Model Selection Best Practices
+
+When using LiteLLM proxy, consider these model selection strategies:
+
+1. **Primary Model**: Use for main reasoning and complex tasks
+
+   - `claude-3-5-sonnet-20241022` - Excellent for code analysis
+   - `gpt-4o` - Strong general reasoning capabilities
+   - `azure/gpt-4o` - Enterprise-grade OpenAI access
+
+2. **Fallback Model**: Use for quick operations
+
+   - `gpt-4o-mini` - Fast and cost-effective for simple tasks
+   - `claude-3-haiku-20240307` - Quick responses for basic operations
+
+### Setting Up LiteLLM Proxy Server
+
+Here's a minimal example of setting up a LiteLLM proxy server:
+
+```yaml
+# docker-compose.yml for LiteLLM proxy
+version: "3.8"
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AZURE_API_KEY=${AZURE_API_KEY}
+      - AZURE_API_BASE=${AZURE_API_BASE}
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command:
+      ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "8"]
+```
+
+```yaml
+# litellm-config.yaml
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: azure/gpt-4o
+    litellm_params:
+      model: azure/gpt-4o
+      api_key: os.environ/AZURE_API_KEY
+      api_base: os.environ/AZURE_API_BASE
+
+general_settings:
+  master_key: your-master-key
+```
+
+### Benefits of LiteLLM Proxy Integration
+
+1. **Multi-Provider Access**: Use different AI providers through a single interface
+2. **Cost Optimization**: Route requests to most cost-effective models
+3. **Reliability**: Automatic failover between providers
+4. **Rate Limiting**: Built-in request throttling and queueing
+5. **Monitoring**: Centralized logging and metrics
+6. **Backwards Compatibility**: No changes needed to existing workflows
+
+### Troubleshooting
+
+Common issues and solutions:
+
+1. **Authentication Errors**: Ensure your LiteLLM proxy is configured with correct API keys for target providers
+2. **Model Not Found**: Verify the model name matches your LiteLLM proxy configuration
+3. **Connection Timeout**: Check network connectivity to your LiteLLM proxy server
+4. **Rate Limiting**: Configure appropriate rate limits in your LiteLLM proxy setup
+
+For more information about LiteLLM configuration, visit the [official LiteLLM documentation](https://docs.litellm.ai/).
+
 ## Security Best Practices
 
 **⚠️ IMPORTANT: Never commit API keys directly to your repository! Always use GitHub Actions secrets.**
@@ -497,6 +642,7 @@ To securely use your Anthropic API key:
    - Paste your API key as the value
 
 2. Reference the secret in your workflow:
+
    ```yaml
    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
    ```

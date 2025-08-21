@@ -1,6 +1,6 @@
 /**
  * Validates the environment variables required for running Claude Code
- * based on the selected provider (Anthropic API, AWS Bedrock, or Google Vertex AI)
+ * based on the selected provider (Anthropic API, AWS Bedrock, Google Vertex AI, or LiteLLM Proxy)
  */
 export function validateEnvironmentVariables() {
   const useBedrock = process.env.CLAUDE_CODE_USE_BEDROCK === "1";
@@ -17,6 +17,7 @@ export function validateEnvironmentVariables() {
   }
 
   if (!useBedrock && !useVertex) {
+    // For LiteLLM proxy or direct Anthropic API, we still need authentication
     if (!anthropicApiKey && !claudeCodeOAuthToken) {
       errors.push(
         "Either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN is required when using direct Anthropic API.",

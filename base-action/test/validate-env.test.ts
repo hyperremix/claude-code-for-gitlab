@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { validateEnvironmentVariables } from "../src/validate-env";
 
 describe("validateEnvironmentVariables", () => {
@@ -11,6 +11,7 @@ describe("validateEnvironmentVariables", () => {
     originalEnv = { ...process.env };
     // Clear relevant environment variables
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
     delete process.env.CLAUDE_CODE_USE_BEDROCK;
     delete process.env.CLAUDE_CODE_USE_VERTEX;
     delete process.env.AWS_REGION;
@@ -22,6 +23,7 @@ describe("validateEnvironmentVariables", () => {
     delete process.env.CLOUD_ML_REGION;
     delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
     delete process.env.ANTHROPIC_VERTEX_BASE_URL;
+    delete process.env.ANTHROPIC_BASE_URL;
   });
 
   afterEach(() => {
@@ -181,6 +183,54 @@ describe("validateEnvironmentVariables", () => {
       expect(() => validateEnvironmentVariables()).toThrow(
         "Cannot use both Bedrock and Vertex AI simultaneously. Please set only one provider.",
       );
+    });
+  });
+
+  describe("LiteLLM Proxy Support", () => {
+    test("should pass when LiteLLM proxy is detected with ANTHROPIC_API_KEY", () => {
+      process.env.ANTHROPIC_BASE_URL = "http://localhost:4000";
+      process.env.ANTHROPIC_API_KEY = "test-api-key";
+
+      expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should pass when LiteLLM proxy is detected with CLAUDE_CODE_OAUTH_TOKEN", () => {
+      process.env.ANTHROPIC_BASE_URL = "http://localhost:4000";
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = "test-oauth-token";
+
+      expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should detect LiteLLM proxy for non-Anthropic domains", () => {
+      process.env.ANTHROPIC_BASE_URL = "https://my-litellm-server.com";
+      process.env.ANTHROPIC_API_KEY = "test-api-key";
+
+      // Should not throw and should log proxy detection
+      expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should not detect LiteLLM proxy for official Anthropic API domains", () => {
+      process.env.ANTHROPIC_BASE_URL = "https://api.anthropic.com";
+      process.env.ANTHROPIC_API_KEY = "test-api-key";
+
+      // Should not throw - this tests that official Anthropic URLs are handled correctly
+      expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should not detect LiteLLM proxy for api.claude.ai domain", () => {
+      process.env.ANTHROPIC_BASE_URL = "https://api.claude.ai";
+      process.env.ANTHROPIC_API_KEY = "test-api-key";
+
+      // Should not throw - this tests that official Anthropic URLs are handled correctly
+      expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should detect LiteLLM proxy for malformed URLs", () => {
+      process.env.ANTHROPIC_BASE_URL = "not-a-valid-url";
+      process.env.ANTHROPIC_API_KEY = "test-api-key";
+
+      // Should not throw and should handle malformed URLs gracefully
+      expect(() => validateEnvironmentVariables()).not.toThrow();
     });
   });
 

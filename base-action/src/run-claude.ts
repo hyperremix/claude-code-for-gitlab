@@ -1,9 +1,8 @@
 import * as core from "@actions/core";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { unlink, writeFile, stat } from "fs/promises";
+import { exec, spawn } from "child_process";
 import { createWriteStream } from "fs";
-import { spawn } from "child_process";
+import { stat, unlink, writeFile } from "fs/promises";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
