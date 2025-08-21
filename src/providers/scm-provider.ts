@@ -1,8 +1,7 @@
 /**
  * SCM Provider Interface
  *
- * Abstracts source control management operations to support multiple platforms
- * (GitHub, GitLab, etc.) with a unified interface.
+ * Abstracts source control management operations for GitLab with a unified interface.
  */
 
 export interface RepoInfo {
@@ -46,9 +45,9 @@ export interface BranchInfo {
 }
 
 export interface SCMContext {
-  platform: "github" | "gitlab";
+  platform: "gitlab";
   isPR: boolean;
-  entityNumber: number; // PR/Issue number or MR IID
+  entityNumber: number; // MR IID or Issue IID
   actor: string;
   runId?: string;
   triggerEvent: string;
@@ -58,7 +57,7 @@ export interface SCMProvider {
   /**
    * Get the platform name
    */
-  getPlatform(): "github" | "gitlab";
+  getPlatform(): "gitlab";
 
   /**
    * Get repository information
@@ -149,7 +148,7 @@ export interface SCMProvider {
 
   /**
    * Apply suggestions/patches to the code
-   * This is platform-specific (GitHub reviews vs GitLab suggestions)
+   * This applies GitLab suggestions to merge requests
    */
   applySuggestions(
     suggestions: Array<{
@@ -161,7 +160,7 @@ export interface SCMProvider {
   ): Promise<void>;
 
   /**
-   * Get platform-specific job/pipeline URL
+   * Get GitLab pipeline URL
    */
   getJobUrl(): string;
 
@@ -172,31 +171,18 @@ export interface SCMProvider {
 
   /**
    * Fetch comprehensive data about the current context
-   * (PR/MR details, files, discussions, etc.)
+   * (MR details, files, discussions, etc.)
    */
   fetchContextData(): Promise<any>;
 }
 
 /**
- * Provider options shared across platforms
+ * Provider options for GitLab
  */
 export interface ProviderOptions {
   token: string;
   triggerPhrase?: string;
   directPrompt?: string;
-}
-
-/**
- * GitHub-specific provider options
- */
-export interface GitHubProviderOptions extends ProviderOptions {
-  runId: string;
-  actor: string;
-  eventName: string;
-  repository: {
-    owner: string;
-    repo: string;
-  };
 }
 
 /**

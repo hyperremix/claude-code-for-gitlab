@@ -23,6 +23,6 @@
   "engines": {
     "bun": ">=1.0.0"
   },
-  "author": "RealMikeChong",
+  "author": "hyperremix",
   "license": "MIT"
 }

@@ -13,7 +13,7 @@ claude_webhook_handler:
     - apt-get update && apt-get install -y git openssh-client
 
     # Clone Claude Code for GitLab
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install
 
@@ -50,12 +50,12 @@ claude_webhook_handler:
     echo "Note: ${CLAUDE_NOTE}"
     echo "Payload: ${GITLAB_WEBHOOK_PAYLOAD}"
 
-    # Run Claude Code action from cloned repository
+    # Run Claude Code for GitLab from cloned repository
     cd /tmp/claude-code
 
     # Step 1: Run prepare script
     echo "========================================="
-    echo "Step 1: Preparing Claude Code action..."
+    echo "Step 1: Preparing Claude Code for GitLab..."
     echo "========================================="
     bun run src/entrypoints/prepare.ts
 
@@ -71,35 +71,22 @@ claude_webhook_handler:
     echo "========================================="
     bun install -g @anthropic-ai/claude-code@1.0.60
 
-    # Step 3: Install base-action dependencies
+    # Step 3: Run Claude Code via GitLab entrypoint
     echo "========================================="
-    echo "Step 3: Installing base-action dependencies..."
-    echo "========================================="
-    cd base-action && bun install && cd ..
-
-    # Step 4: Run Claude Code via base-action
-    echo "========================================="
-    echo "Step 4: Running Claude Code..."
+    echo "Step 3: Running Claude Code..."
     echo "========================================="
 
-    # Set up environment for base-action
-    export CLAUDE_CODE_ACTION="1"
-    export INPUT_PROMPT_FILE="/tmp/claude-prompts/claude-prompt.txt"
-    export INPUT_TIMEOUT_MINUTES="30"
-    export INPUT_MCP_CONFIG=""
-    export INPUT_SETTINGS=""
-    export INPUT_SYSTEM_PROMPT=""
-    export INPUT_APPEND_SYSTEM_PROMPT=""
-    export INPUT_ALLOWED_TOOLS="${ALLOWED_TOOLS:-}"
-    export INPUT_DISALLOWED_TOOLS="${DISALLOWED_TOOLS:-}"
-    export INPUT_MAX_TURNS="${MAX_TURNS:-}"
-    export INPUT_CLAUDE_ENV="${CLAUDE_ENV:-}"
-    export INPUT_FALLBACK_MODEL="${FALLBACK_MODEL:-}"
-    export ANTHROPIC_MODEL="${CLAUDE_MODEL:-sonnet}"
-    export DETAILED_PERMISSION_MESSAGES="1"
+    # Set up environment variables for Claude Code CLI
+    export TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-30}"
+    export ALLOWED_TOOLS="${ALLOWED_TOOLS:-}"
+    export DISALLOWED_TOOLS="${DISALLOWED_TOOLS:-}"
+    export MAX_TURNS="${MAX_TURNS:-}"
+    export CLAUDE_ENV="${CLAUDE_ENV:-}"
+    export FALLBACK_MODEL="${FALLBACK_MODEL:-}"
+    export MODEL="${CLAUDE_MODEL:-sonnet}"
 
-    # Run the base-action
-    bun run base-action/src/index.ts
+    # Run Claude Code directly through GitLab entrypoint
+    bun run src/entrypoints/gitlab_entrypoint.ts
 
     # Capture the exit code
     CLAUDE_EXIT_CODE=$?
@@ -111,7 +98,7 @@ claude_webhook_handler:
       echo "========================================="
       export CLAUDE_SUCCESS=$( [ $CLAUDE_EXIT_CODE -eq 0 ] && echo "true" || echo "false" )
       export PREPARE_SUCCESS="true"
-      export OUTPUT_FILE="/tmp/claude-output.json"  # This will be created by base-action
+      # OUTPUT_FILE is set by the GitLab entrypoint to the correct path
       
       # Pass issue IID if we're in issue context
       if [ "$CLAUDE_RESOURCE_TYPE" = "issue" ]; then

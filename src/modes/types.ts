@@ -1,9 +1,9 @@
-import type { ParsedGitHubContext } from "../github/context";
+import type { ParsedGitLabContext } from "../gitlab/context";
 import type { ModeName } from "./registry";
 
 export type ModeContext = {
   mode: ModeName;
-  githubContext: ParsedGitHubContext;
+  gitlabContext: ParsedGitLabContext;
   commentId?: number;
   baseBranch?: string;
   claudeBranch?: string;
@@ -16,7 +16,7 @@ export type ModeData = {
 };
 
 /**
- * Mode interface for claude-code-action execution modes.
+ * Mode interface for claude-code execution modes.
  * Each mode defines its own behavior for trigger detection, prompt generation,
  * and tracking comment creation.
  *
@@ -29,18 +29,18 @@ export type Mode = {
   description: string;
 
   /**
-   * Determines if this mode should trigger based on the GitHub context
+   * Determines if this mode should trigger based on the GitLab context
    */
-  shouldTrigger(context: ParsedGitHubContext): boolean;
+  shouldTrigger(context: ParsedGitLabContext): boolean;
 
   /**
    * Prepares the mode context with any additional data needed for prompt generation
    */
-  prepareContext(context: ParsedGitHubContext, data?: ModeData): ModeContext;
+  prepareContext(context: ParsedGitLabContext, data?: ModeData): ModeContext;
 
   /**
    * Returns additional tools that should be allowed for this mode
-   * (base GitHub tools are always included)
+   * (base GitLab tools are always included)
    */
   getAllowedTools(): string[];
 

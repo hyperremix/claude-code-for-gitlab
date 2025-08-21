@@ -16,7 +16,7 @@ A lightweight webhook server that listens for `@claude` mentions in GitLab issue
 
 ### Using Pre-built Docker Image
 
-> **Note:** The Docker image needs to be made public first. Go to the [package settings](https://github.com/RealMikeChong/claude-code-for-gitlab/pkgs/container/claude-code-gitlab-app) and change the visibility to "Public".
+> **Note:** The Docker image needs to be made public first. Go to the [package settings](https://github.com/hyperremix/claude-code-for-gitlab/pkgs/container/claude-code-gitlab-app) and change the visibility to "Public".
 
 ```bash
 docker run -d \
@@ -24,7 +24,7 @@ docker run -d \
   -p 3000:3000 \
   -e GITLAB_TOKEN=glpat-xxxxxxxxxxxxxxxxxxxx \
   -e WEBHOOK_SECRET=your-webhook-secret-here \
-  ghcr.io/realmikechong/claude-code-gitlab-app:latest
+  ghcr.io/hyperremix/claude-code-gitlab-app:latest
 ```
 
 ### Building from Source
@@ -33,7 +33,7 @@ If the pre-built image is not accessible, you can build it locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git
+git clone https://github.com/hyperremix/claude-code-for-gitlab.git
 cd claude-code-for-gitlab/gitlab-app
 
 # Build the Docker image
@@ -107,7 +107,7 @@ docker run -d \
 
 ## Environment Variables
 
-- `GITLAB_URL`: GitLab instance URL (default: https://gitlab.com)
+- `GITLAB_URL`: GitLab instance URL (default: <https://gitlab.com>)
 - `GITLAB_TOKEN`: Personal access token with `api` scope
 - `WEBHOOK_SECRET`: Secret token for webhook verification
 - `PORT`: Server port (default: 3000)

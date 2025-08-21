@@ -8,8 +8,8 @@
 import { $ } from "bun";
 import * as path from "path";
 import {
-  getClaudePromptsDirectory,
   getClaudeExecutionOutputPath,
+  getClaudePromptsDirectory,
 } from "../utils/temp-directory";
 
 interface PhaseResult {
@@ -22,7 +22,7 @@ interface PhaseResult {
 async function runPreparePhase(): Promise<PhaseResult> {
   try {
     console.log("=========================================");
-    console.log("Phase 1: Preparing Claude Code action...");
+    console.log("Phase 1: Preparing Claude Code for GitLab...");
     console.log("=========================================");
 
     // Run prepare.ts and capture output
@@ -101,26 +101,7 @@ async function runExecutePhase(
     }
 
     console.log("=========================================");
-    console.log("Phase 3: Installing base-action dependencies...");
-    console.log("=========================================");
-
-    // Install base-action dependencies
-    const baseActionPath = path.join(
-      path.dirname(__dirname),
-      "..",
-      "base-action",
-    );
-    const depsResult = await $`cd ${baseActionPath} && bun install`;
-    console.log(depsResult.stdout.toString());
-
-    if (depsResult.exitCode !== 0) {
-      throw new Error(
-        `Failed to install base-action dependencies: ${depsResult.stderr.toString()}`,
-      );
-    }
-
-    console.log("=========================================");
-    console.log("Phase 4: Running Claude Code...");
+    console.log("Phase 3: Running Claude Code...");
     console.log("=========================================");
 
     // Check if prompt file exists and read its content
@@ -143,28 +124,55 @@ async function runExecutePhase(
       console.error("Failed to read prompt file:", error);
     }
 
-    // Set up environment for base-action
-    const env = {
-      ...process.env,
-      CLAUDE_CODE_ACTION: "1",
-      INPUT_PROMPT_FILE: promptPath,
-      INPUT_TIMEOUT_MINUTES: "30",
-      INPUT_MCP_CONFIG: "",
-      INPUT_SETTINGS: "",
-      INPUT_SYSTEM_PROMPT: "",
-      INPUT_APPEND_SYSTEM_PROMPT: "",
-      INPUT_ALLOWED_TOOLS: process.env.ALLOWED_TOOLS || "",
-      INPUT_DISALLOWED_TOOLS: process.env.DISALLOWED_TOOLS || "",
-      INPUT_MAX_TURNS: process.env.MAX_TURNS || "",
-      INPUT_CLAUDE_ENV: process.env.CLAUDE_ENV || "",
-      INPUT_FALLBACK_MODEL: process.env.FALLBACK_MODEL || "",
-      ANTHROPIC_MODEL: process.env.CLAUDE_MODEL || "sonnet",
-      DETAILED_PERMISSION_MESSAGES: "1",
-    };
+    // Build Claude Code CLI arguments
+    const args = [
+      "claude",
+      "--prompt-file",
+      promptPath,
+      "--timeout",
+      process.env.TIMEOUT_MINUTES || "30",
+      "--model",
+      process.env.CLAUDE_MODEL || "sonnet",
+      "--output-jsonl",
+      getClaudeExecutionOutputPath(),
+    ];
 
-    // Run the base-action
-    const baseActionScript = path.join(baseActionPath, "src", "index.ts");
-    const executeResult = await $`bun run ${baseActionScript}`.env(env).quiet();
+    // Add optional arguments if environment variables are set
+    if (process.env.ALLOWED_TOOLS) {
+      args.push("--allowed-tools", process.env.ALLOWED_TOOLS);
+    }
+
+    if (process.env.DISALLOWED_TOOLS) {
+      args.push("--disallowed-tools", process.env.DISALLOWED_TOOLS);
+    }
+
+    if (process.env.MAX_TURNS) {
+      args.push("--max-turns", process.env.MAX_TURNS);
+    }
+
+    if (process.env.CLAUDE_ENV) {
+      args.push("--claude-env", process.env.CLAUDE_ENV);
+    }
+
+    if (process.env.FALLBACK_MODEL) {
+      args.push("--fallback-model", process.env.FALLBACK_MODEL);
+    }
+
+    // Set up environment for Claude Code CLI
+    const env: Record<string, string> = {
+      ...process.env,
+      DETAILED_PERMISSION_MESSAGES: "1",
+    } as Record<string, string>;
+
+    // Only add ANTHROPIC_API_KEY if it exists
+    if (process.env.ANTHROPIC_API_KEY) {
+      env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    }
+
+    console.log(`Running Claude Code with args: ${args.join(" ")}`);
+
+    // Run Claude Code CLI directly
+    const executeResult = await $`${args}`.env(env).quiet();
 
     // Print output regardless of exit code
     console.log(executeResult.stdout.toString());

@@ -39,10 +39,12 @@ Setting up Claude Code as a GitLab application provides several benefits:
 
    - **Name**: `Claude Code Assistant`
    - **Redirect URI**:
+
      ```
      https://your-webhook-service.com/oauth/callback
      http://localhost:3000/oauth/callback (for development)
      ```
+
    - **Confidential**: ✓ Check this box
    - **Scopes**: Select the following:
      - `api` - Full API access
@@ -75,10 +77,12 @@ For self-hosted GitLab, you can create an admin-level application that's availab
 
    - **Name**: `Claude Code Assistant`
    - **Redirect URI**:
+
      ```
      https://your-domain.com/oauth/callback
      https://your-internal-domain/oauth/callback (for internal networks)
      ```
+
    - **Trusted**: ✓ Check this (skips authorization screen for users)
    - **Confidential**: ✓ Check this
    - **Scopes**:
@@ -158,7 +162,7 @@ Using the provided webhook service in this repository:
 
 ```bash
 # Clone the repository
-git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git
+git clone https://github.com/hyperremix/claude-code-for-gitlab.git
 cd claude-code-for-gitlab/webhook-service
 
 # Install dependencies
@@ -323,7 +327,7 @@ claude_assistant:
   image: oven/bun:1.1.29-alpine
   before_script:
     - apk add --no-cache git
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude
     - cd /tmp/claude && bun install --frozen-lockfile
   script:
     - cd /tmp/claude && bun run src/entrypoints/prepare.ts

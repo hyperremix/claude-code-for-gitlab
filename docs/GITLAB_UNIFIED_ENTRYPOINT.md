@@ -18,8 +18,7 @@ The entrypoint handles three phases sequentially:
 2. **Execute Phase**
 
    - Installs Claude Code globally
-   - Installs base-action dependencies
-   - Runs Claude Code via base-action
+   - Runs Claude Code CLI directly
    - Captures execution results
 
 3. **Update Phase**

@@ -34,7 +34,7 @@ claude_assistant:
       fi
 
     # Clone Claude Code for GitLab from GitHub
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install --frozen-lockfile
 
@@ -87,7 +87,7 @@ claude_local_llm:
     - apk add --no-cache git openssh-client curl
 
     # Clone Claude Code for GitLab
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install --frozen-lockfile
 
