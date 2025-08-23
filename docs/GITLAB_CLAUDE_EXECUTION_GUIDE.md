@@ -82,6 +82,7 @@ Set these variables in your GitLab project's CI/CD settings:
 ### Required Variables
 
 1. **CLAUDE_CODE_GL_ACCESS_TOKEN** - Your GitLab Personal Access Token
+
    - Go to GitLab → User Settings → Access Tokens
    - Create token with `api`, `read_repository`, `write_repository` scopes
    - Add to CI/CD variables (Settings → CI/CD → Variables)
@@ -208,8 +209,8 @@ CLAUDE_CODE_GL_ACCESS_TOKEN: Set (length: 42, prefix: "glpat-XX...")
 claude:
   # Optimize for performance
   variables:
-    GIT_DEPTH: 1                    # Shallow clone
-    GIT_STRATEGY: clone             # Fresh clone each time
+    GIT_DEPTH: 1 # Shallow clone
+    GIT_STRATEGY: clone # Fresh clone each time
   cache:
     key: claude-deps-${CI_COMMIT_REF_SLUG}
     paths:
@@ -255,7 +256,7 @@ claude:
 If migrating from direct CI/CD execution:
 
 1. **Remove old workflows**: Delete direct execution pipeline configurations
-2. **Deploy webhook server**: Follow the [webhook setup guide](GITLAB_APP_SETUP.md)
+2. **Deploy webhook server**: Follow the [webhook deployment guide](WEBHOOK_DEPLOYMENT.md)
 3. **Update pipelines**: Use webhook-triggered configuration shown above
 4. **Test thoroughly**: Verify @claude mentions trigger correctly
 5. **Monitor**: Watch for any integration issues during migration

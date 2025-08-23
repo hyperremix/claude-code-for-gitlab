@@ -69,10 +69,12 @@ examples/                     # Documentation and setup examples
 └── README.md                 # Webhook server setup guide
 
 docs/                         # Documentation
-├── GITLAB_APP_SETUP.md       # Webhook server setup
-├── GITLAB_CLAUDE_EXECUTION_GUIDE.md
-├── GITLAB_MR_CREATION.md     # Merge request workflows
-└── GITLAB_TOKEN_TROUBLESHOOTING.md
+├── AUTHENTICATION_GUIDE.md   # Complete authentication setup
+├── QUICK_START.md            # 10-minute setup guide
+├── WEBHOOK_DEPLOYMENT.md     # Advanced deployment guide
+├── TROUBLESHOOTING.md        # Issue resolution guide
+├── GITLAB_CLAUDE_EXECUTION_GUIDE.md  # Webhook execution flow
+└── TEMP_DIRECTORY_HANDLING.md        # Technical implementation details
 ```
 
 ## Development Environment

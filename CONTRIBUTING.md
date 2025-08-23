@@ -43,7 +43,7 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
    export GITLAB_TOKEN="your-gitlab-token"
    export WEBHOOK_SECRET="your-webhook-secret"
    export REDIS_URL="redis://localhost:6379"
-   
+
    # Optional
    export DISCORD_WEBHOOK_URL="your-discord-webhook-url"
    ```
@@ -73,7 +73,7 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
    ```bash
    # Using Docker
    docker run -d -p 6379:6379 redis:alpine
-   
+
    # Or install locally and start
    redis-server
    ```
@@ -92,7 +92,7 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
    ```bash
    # Health check
    curl http://localhost:3000/health
-   
+
    # Test webhook endpoint (with proper GitLab webhook payload)
    curl -X POST http://localhost:3000/webhook \
      -H "Content-Type: application/json" \
@@ -146,7 +146,7 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
    bun test
    bun run typecheck
    bun run format:check
-   
+
    # Also test webhook server
    cd gitlab-app
    bun test
@@ -170,11 +170,13 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
 When modifying the webhook server or GitLab integration:
 
 1. **Local Webhook Testing**:
+
    - Set up ngrok or similar tool to expose local webhook server
    - Configure GitLab webhook to point to your local endpoint
    - Test with real GitLab webhook events
 
 2. **GitLab CI Pipeline Testing**:
+
    - Create a test repository on GitLab
    - Configure webhook server to trigger pipelines
    - Use the example pipeline configuration:
