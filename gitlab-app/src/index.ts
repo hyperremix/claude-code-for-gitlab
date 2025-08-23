@@ -1,17 +1,16 @@
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
+import { sendPipelineNotification, sendRateLimitNotification } from "./discord";
 import {
-  triggerPipeline,
   cancelOldPipelines,
-  getProject,
-  branchExists,
   createBranch,
+  getProject,
   sanitizeBranchName,
+  triggerPipeline,
 } from "./gitlab";
 import { limitByUser } from "./limiter";
 import { logger } from "./logger";
 import type { WebhookPayload } from "./types";
-import { sendPipelineNotification, sendRateLimitNotification } from "./discord";
 
 const app = new Hono();
 

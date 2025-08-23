@@ -1,248 +1,79 @@
-# GitLab CI/CD Examples
+# Claude Code for GitLab Examples
 
-This directory contains example GitLab CI/CD configurations for integrating Claude Code into your GitLab workflows.
+This directory contains documentation for setting up and using claude-code-for-gitlab with the webhook server architecture.
 
-## 📚 Documentation
+## Webhook-Only Architecture
 
-- **[GitLab App Setup Guide](../../docs/GITLAB_APP_SETUP.md)** - Comprehensive guide for setting up Claude Code as a GitLab OAuth application
-- **[Webhook Service Setup](../../webhook-service/SETUP_GUIDE.md)** - Detailed instructions for deploying the webhook service
-- **[Self-Hosted GitLab Guide](#3-self-hostedgitlabciyml---self-hosted-gitlab)** - Configuration for on-premise GitLab instances
+Claude Code for GitLab now uses a **webhook-only architecture** that provides a streamlined and reliable integration approach:
 
-## 🚀 Quick Start - Integration Methods
+### How It Works
 
-### Method 1: Direct Repository Clone (Recommended)
+1. **Deploy the Webhook Server** - The `gitlab-app/` directory contains a standalone Node.js webhook server
+2. **Configure GitLab Webhooks** - Set up webhooks in your GitLab project to send events to the webhook server
+3. **Trigger with Comments** - Comment `@claude` on issues or merge requests to trigger Claude
+4. **Automatic Pipeline Execution** - The webhook server automatically triggers your CI/CD pipeline with the necessary context
 
-The easiest way to integrate Claude Code is to clone the repository directly in your CI/CD pipeline:
+### Key Benefits
 
-```yaml
-claude_assistant:
-  image: oven/bun:1.1.29-alpine
-  before_script:
-    # Clone Claude Code for GitLab
-    - apk add --no-cache git openssh-client
-    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
-    - cd /tmp/claude-code
-    - bun install --frozen-lockfile
-    - cd $CI_PROJECT_DIR
-  script:
-    - cd /tmp/claude-code && bun run src/entrypoints/prepare.ts
-  variables:
-    CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-```
+- **Simplified Setup** - Single webhook server handles all GitLab integration
+- **Reliable Triggering** - Direct webhook events ensure consistent operation
+- **Rate Limiting** - Built-in rate limiting (3 triggers per user per resource per 15 minutes)
+- **Branch Management** - Automatic branch creation for issues
+- **Discord Integration** - Optional Discord notifications for results
 
-### Method 2: Docker Image (For Production Use)
+## Setup Instructions
 
-For faster pipeline execution, build a Docker image from the Claude Code repository:
+### 1. Deploy the Webhook Server
+
+Follow the detailed setup instructions in [`gitlab-app/README.md`](../gitlab-app/README.md) to deploy the webhook server.
+
+### 2. Configure Your GitLab CI/CD Pipeline
+
+Use `gitlab-claude-unified.yml` as your GitLab CI/CD configuration. This file contains the pipeline that will be triggered by the webhook server:
 
 ```yaml
-claude_assistant:
-  image: your-registry/claude-code-gitlab:latest
-  script:
-    - claude-code-for-gitlab
-  variables:
-    CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
+# Copy gitlab-claude-unified.yml to your project's .gitlab-ci.yml
+# The webhook server will trigger this pipeline with all necessary context
 ```
 
-See `docker-integration.gitlab-ci.yml` for complete Docker build instructions.
+### 3. Set Up GitLab Webhooks
 
-### Method 3: GitLab Include (Simplest)
+Configure your GitLab project to send webhook events to your deployed webhook server:
 
-For the absolute simplest integration, you can include a remote configuration:
+1. Go to your GitLab project's **Settings > Webhooks**
+2. Add your webhook server URL
+3. Configure events: **Issues events**, **Merge request events**, **Note events**
+4. Set your webhook secret (same as configured in the webhook server)
 
-```yaml
-include:
-  - remote: "https://raw.githubusercontent.com/hyperremix/claude-code-for-gitlab/main/examples/gitlab/include/claude-code.gitlab-ci.yml"
+### 4. Start Using Claude
 
-variables:
-  CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
-```
+Once everything is set up:
 
-## 📁 Example Files
+1. Create an issue or merge request in your GitLab project
+2. Comment `@claude` with your request
+3. The webhook server will automatically:
+   - Validate the trigger
+   - Create a branch (for issues)
+   - Trigger your CI/CD pipeline
+   - Provide all necessary context to Claude
 
-### 1. `.gitlab-ci.yml` - Basic Configuration
+## Webhook Server Features
 
-The standard configuration for using Claude Code in GitLab CI/CD:
+- **Trigger Validation** - Only responds to `@claude` mentions
+- **Rate Limiting** - Prevents abuse with configurable limits
+- **Pipeline Management** - Cancels old pipelines and starts new ones
+- **Branch Creation** - Automatically creates branches for issues
+- **Environment Variables** - Passes all necessary context to CI/CD jobs
+- **Discord Integration** - Optional notifications for results
+- **Error Handling** - Comprehensive error handling and logging
 
-- Merge request comment triggers
-- Issue comment handling
-- Support for Anthropic API, AWS Bedrock, and Google Vertex AI
-- Custom MCP server configuration
+## Migration from Direct CI/CD Integration
 
-### 2. `webhook-triggered.gitlab-ci.yml` - Webhook-Based Triggers
+If you were previously using direct CI/CD integration approaches, migrating to the webhook architecture provides:
 
-Advanced setup using GitLab webhooks for more control:
+- **Reduced Complexity** - No need for complex CI/CD job orchestration
+- **Better Reliability** - Webhook events are more reliable than CI/CD triggers
+- **Improved Performance** - Faster setup and execution times
+- **Enhanced Features** - Access to all webhook server features
 
-- Webhook configuration for different event types
-- Automatic webhook setup job
-- Payload parsing and handling
-
-### 3. `self-hosted.gitlab-ci.yml` - Self-Hosted GitLab
-
-Configuration for self-hosted GitLab instances:
-
-- Custom certificate handling
-- Proxy configuration
-- Local LLM support via Ollama
-- Enhanced security restrictions
-
-### 4. `advanced-features.gitlab-ci.yml` - Advanced Features
-
-Comprehensive example with advanced capabilities:
-
-- User permission validation
-- Rate limiting
-- Code quality analysis
-- Automatic testing and merging
-- Scheduled maintenance tasks
-
-## 🚀 Quick Start
-
-1. **Choose a configuration** that matches your needs
-2. **Copy the configuration** to your project's `.gitlab-ci.yml`
-3. **Set up CI/CD variables** in GitLab:
-   - **Recommended**: `CLAUDE_CODE_OAUTH_TOKEN` - Claude Code OAuth token (replaces both GitLab and Anthropic tokens)
-   - **Alternative**:
-     - `CLAUDE_GITLAB_TOKEN` - GitLab personal access token with `api` scope
-     - `CLAUDE_API_KEY` - Your Anthropic API key (or credentials for other providers)
-4. **Customize the trigger phrase** and other settings as needed
-
-## 🔑 Required GitLab Permissions
-
-The GitLab token needs the following scopes:
-
-- `api` - Full API access
-- `read_repository` - Read repository content
-- `write_repository` - Push changes to branches
-
-## 🌟 Key Features
-
-### Trigger Methods
-
-- **Merge Request Comments**: Mention `@claude` in MR comments
-- **Issue Comments**: Mention `@claude` in issue comments (requires webhook)
-- **Manual Triggers**: Use GitLab's web UI with custom prompts
-- **Scheduled Runs**: Automatic maintenance and code review
-
-### Provider Support
-
-- **Anthropic API**: Direct integration with Claude
-- **AWS Bedrock**: Using AWS credentials or OIDC
-- **Google Vertex AI**: Using service accounts or workload identity
-- **Local LLMs**: Ollama integration for on-premise deployments
-
-### Security Features
-
-- User permission validation
-- Rate limiting
-- Tool restrictions
-- File access controls
-- Audit logging
-
-## 📝 Environment Variables
-
-### Core Variables (Automatically Provided by GitLab CI)
-
-- `CI_PROJECT_ID` - Project ID
-- `CI_MERGE_REQUEST_IID` - Merge request internal ID
-- `CI_SERVER_URL` - GitLab instance URL
-- `GITLAB_USER_NAME` - User who triggered the pipeline
-- `GITLAB_USER_EMAIL` - User's email address
-- `CI_COMMIT_SHA` - Current commit SHA
-- `CI_PIPELINE_URL` - URL to the current pipeline
-
-### Required Variables (Set in CI/CD Settings)
-
-**Option 1 - OAuth Token (Recommended):**
-
-- `CLAUDE_CODE_OAUTH_TOKEN` - Claude Code OAuth token (handles both GitLab and AI authentication)
-
-**Option 2 - Traditional Tokens:**
-
-- `CLAUDE_GITLAB_TOKEN` - GitLab personal access token
-- `CLAUDE_API_KEY` - Anthropic API key (or provider credentials)
-
-### Optional Configuration
-
-- `CLAUDE_TRIGGER_PHRASE` - Custom trigger phrase (default: `@claude`)
-- `CLAUDE_MODEL` - Model to use (default: `sonnet`)
-- `CLAUDE_BRANCH_PREFIX` - Prefix for branches created by Claude
-- `BASE_BRANCH` - Base branch for comparisons (default: `main`)
-- `CLAUDE_INSTRUCTIONS` - Custom instructions for Claude
-- `CLAUDE_ALLOWED_TOOLS` - Whitelist of allowed tools
-- `CLAUDE_DISALLOWED_TOOLS` - Blacklist of disallowed tools
-
-## 🔧 Customization Tips
-
-### Custom Trigger Phrases
-
-```yaml
-variables:
-  CLAUDE_TRIGGER_PHRASE: "@ai-helper" # Change from default @claude
-```
-
-### Restrict Claude's Capabilities
-
-```yaml
-variables:
-  CLAUDE_ALLOWED_TOOLS: |
-    read_file
-    write_file
-    search_files
-  CLAUDE_DISALLOWED_TOOLS: |
-    run_command: rm, curl
-    browser_action
-```
-
-### Add Custom Context
-
-```yaml
-variables:
-  CLAUDE_INSTRUCTIONS: |
-    You are helping with a Python project.
-    Follow PEP 8 style guidelines.
-    Always write unit tests for new functions.
-```
-
-### Use Different Models
-
-```yaml
-variables:
-  CLAUDE_MODEL: "claude-3-opus-latest" # Use Opus for complex tasks
-```
-
-## 🔒 Security Best Practices
-
-1. **Use Protected Variables**: Store sensitive tokens as protected CI/CD variables
-2. **Limit Trigger Users**: Use permission validation to restrict who can trigger Claude
-3. **Review Changes**: Always review Claude's changes before merging
-4. **Use Branch Protection**: Require approvals for Claude's merge requests
-5. **Audit Logs**: Monitor pipeline logs for Claude's activities
-
-## 🆘 Troubleshooting
-
-### Claude Not Responding
-
-- Check if the trigger phrase is correct
-- Verify CI/CD variables are set correctly
-- Check pipeline logs for error messages
-
-### Permission Errors
-
-- Ensure GitLab token has `api` scope
-- Check if the user has Developer or higher access
-- Verify branch protection rules allow Claude to push
-
-### Self-Hosted Issues
-
-- Verify certificate configuration
-- Check proxy settings
-- Ensure GitLab instance URL is correct
-
-## 📚 Additional Resources
-
-- [Claude Code for GitLab Documentation](../README.md)
-- [GitLab CI/CD Documentation](https://docs.gitlab.com/ee/ci/)
-- [GitLab Webhooks Guide](https://docs.gitlab.com/ee/user/project/integrations/webhooks.html)
-- [GitLab API Reference](https://docs.gitlab.com/ee/api/)
+For migration assistance, see the webhook server documentation in [`gitlab-app/README.md`](../gitlab-app/README.md).

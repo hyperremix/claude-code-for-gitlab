@@ -4,61 +4,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **GitLab CI/CD Integration Tool** that enables Claude AI to work directly within GitLab workflows through CI/CD pipelines, webhook processing, and merge request automation. It provides intelligent code assistance, automated reviews, and AI-powered development support integrated into GitLab projects.
+This is a **GitLab Webhook Integration Tool** that enables Claude AI to work within GitLab workflows through a dedicated webhook server architecture. It provides intelligent code assistance, automated reviews, and AI-powered development support by listening for GitLab webhook events and triggering automated CI/CD pipelines in response to @claude mentions.
 
 ## Architecture
 
+### Webhook-Only Architecture
+
+The project uses a **webhook-only architecture** that consists of a standalone webhook server that:
+
+1. **Listens** for GitLab webhook events (Note Hook for comments)
+2. **Validates** webhook secrets and trigger phrases (@claude)
+3. **Creates** branches automatically for issues
+4. **Triggers** CI/CD pipelines with proper environment variables
+5. **Provides** rate limiting and security features
+
 ### Technology Stack
 
-- **Runtime**: Node.js + TypeScript
+- **Webhook Server**: Node.js + TypeScript with Hono framework
 - **Package Manager**: Bun (for dependency management and testing)
 - **GitLab Integration**: @gitbeaker/rest for GitLab API operations
-- **Authentication**: GitLab Personal Access Tokens and OAuth tokens
-- **CI/CD**: GitLab CI/CD pipeline integration
-- **Webhook Processing**: Real-time GitLab webhook handling
+- **Authentication**: GitLab Personal Access Tokens
+- **Rate Limiting**: Redis-based rate limiting (3 triggers per user per resource per 15 minutes)
+- **Security**: HMAC webhook validation
+- **Notifications**: Optional Discord integration
 
 ### Project Structure
 
 ```bash
-src/
-├── entrypoints/              # Main entry points
-│   ├── gitlab_entrypoint.ts  # GitLab CI/CD entry point
-│   ├── prepare.ts            # Context preparation
-│   ├── format-turns.ts       # Conversation formatting
-│   └── update-comment-gitlab.ts # GitLab comment updates
+gitlab-app/                   # Webhook Server (Primary Component)
+├── src/                      # Application source
+│   ├── index.ts              # Main webhook server entry point
+│   ├── gitlab.ts             # GitLab API integration
+│   ├── pipeline-runner.ts    # Pipeline triggering logic
+│   ├── limiter.ts            # Redis rate limiting
+│   ├── discord.ts            # Discord notifications
+│   ├── logger.ts             # Logging utilities
+│   └── types.ts              # TypeScript definitions
+├── docker-compose.yml        # Container deployment
+├── Dockerfile                # Container build
+└── package.json              # Application dependencies
+
+src/                          # Supporting Libraries (Used by Webhook Server)
 ├── gitlab/                   # GitLab-specific integration
 │   ├── context.ts            # GitLab context parsing
-│   ├── webhook.ts            # Webhook handling
+│   ├── webhook.ts            # Webhook handling utilities
 │   ├── data/                 # Data fetching utilities
 │   └── validation/           # Trigger validation
 ├── providers/                # SCM provider abstraction
 │   ├── gitlab-provider.ts    # GitLab API provider
-│   ├── provider-factory.ts   # Provider factory (GitLab-only)
+│   ├── provider-factory.ts   # Provider factory
 │   └── scm-provider.ts       # Provider interface
 ├── modes/                    # Operation modes
 │   ├── registry.ts           # Mode registry
 │   ├── types.ts              # Mode type definitions
-│   └── tag/                  # Tag mode implementation
+│   └── tag/                  # Tag mode (@claude trigger detection)
 ├── utils/                    # Utility functions
 │   ├── retry.ts              # Retry mechanisms
 │   └── temp-directory.ts     # Temporary directory handling
 └── types/                    # Type definitions
     └── gitbeaker.ts          # GitLab API types
 
-gitlab-app/                   # GitLab OAuth Application (separate component)
-├── src/                      # Application source
-├── docker-compose.yml        # Container deployment
-└── package.json              # Application dependencies
-
-examples/                     # GitLab CI/CD examples
-├── .gitlab-ci.yml            # Basic integration
-├── advanced-features.gitlab-ci.yml
-├── docker-integration.gitlab-ci.yml
-└── include/
-    └── claude-code.gitlab-ci.yml
+gitlab-claude-unified.yml     # Example CI/CD pipeline for webhook-triggered execution
+examples/                     # Documentation and setup examples
+└── README.md                 # Webhook server setup guide
 
 docs/                         # Documentation
-├── GITLAB_APP_SETUP.md       # OAuth app setup
+├── GITLAB_APP_SETUP.md       # Webhook server setup
 ├── GITLAB_CLAUDE_EXECUTION_GUIDE.md
 ├── GITLAB_MR_CREATION.md     # Merge request workflows
 └── GITLAB_TOKEN_TROUBLESHOOTING.md
@@ -117,11 +128,13 @@ bun test test/providers/  # Provider tests
 - **Provider Factory** (`src/providers/provider-factory.ts`): Creates GitLab provider instances
 - **SCM Interface** (`src/providers/scm-provider.ts`): Abstract provider interface
 
-### Entry Points
+### Webhook Server Components
 
-- **GitLab Entry** (`src/entrypoints/gitlab_entrypoint.ts`): Main GitLab CI/CD integration point
-- **Preparation** (`src/entrypoints/prepare.ts`): Context and environment preparation
-- **Comment Updates** (`src/entrypoints/update-comment-gitlab.ts`): GitLab comment management
+- **Webhook Handler** (`gitlab-app/src/index.ts`): Main webhook server entry point
+- **GitLab Integration** (`gitlab-app/src/gitlab.ts`): GitLab API operations and project management
+- **Pipeline Runner** (`gitlab-app/src/pipeline-runner.ts`): CI/CD pipeline triggering logic
+- **Rate Limiter** (`gitlab-app/src/limiter.ts`): Redis-based rate limiting functionality
+- **Discord Notifications** (`gitlab-app/src/discord.ts`): Optional Discord webhook integration
 
 ## Authentication & Security
 
@@ -148,47 +161,69 @@ Support for multiple authentication methods:
 - `read_repository` for repository access
 - `write_repository` for creating commits and branches
 
-## GitLab CI/CD Integration
+## Webhook Server Deployment
 
-### Basic Pipeline Integration
+### Webhook Server Setup
+
+The webhook server is the core component that handles GitLab integrations:
+
+```bash
+# Deploy webhook server using Docker Compose
+cd gitlab-app
+docker-compose up -d
+
+# Or run locally for development
+bun install
+bun run dev
+```
+
+### GitLab Webhook Configuration
+
+1. **Configure GitLab webhooks** to point to your webhook server endpoint
+2. **Set webhook triggers** for:
+   - Note (comment) events - Primary trigger for @claude mentions
+   - Issue events - For issue-based workflows
+   - Merge request events - For MR-based workflows
+3. **Configure webhook secret** for HMAC validation
+
+### Webhook-Triggered Pipeline Integration
+
+When the webhook server receives a valid @claude mention, it triggers a CI/CD pipeline with this configuration:
 
 ```yaml
-# .gitlab-ci.yml
+# Example .gitlab-ci.yml (see gitlab-claude-unified.yml)
 stages:
-  - claude-review
+  - claude-response
 
 claude-code:
-  stage: claude-review
+  stage: claude-response
   image: node:18
   script:
     - npx @hyperremix/claude-code-for-gitlab
   variables:
-    GITLAB_TOKEN: $CLAUDE_CODE_GL_ACCESS_TOKEN
-  only:
-    - merge_requests
+    GITLAB_TOKEN: $CI_JOB_TOKEN
+  rules:
+    - if: $CLAUDE_TRIGGER == "true"
 ```
-
-### Webhook Integration
-
-1. Configure GitLab webhooks to point to your Claude endpoint
-2. Set webhook triggers for:
-   - Merge request events
-   - Issue events
-   - Note (comment) events
-   - Pipeline events
 
 ### Environment Variables
 
 ```bash
-# Required
-GITLAB_TOKEN=your_gitlab_token
-CI_PROJECT_ID=gitlab_project_id
+# Webhook Server Configuration
+GITLAB_TOKEN=your_gitlab_personal_access_token
+WEBHOOK_SECRET=your_webhook_secret
+ANTHROPIC_API_KEY=your_anthropic_api_key
+REDIS_URL=redis://localhost:6379  # For rate limiting
 
 # Optional
-CI_MERGE_REQUEST_IID=merge_request_id
-CI_SERVER_URL=https://gitlab.com
-CI_PIPELINE_URL=pipeline_url
-CLAUDE_RESOURCE_ID=issue_id
+DISCORD_WEBHOOK_URL=your_discord_webhook  # For notifications
+PORT=3000  # Server port (default: 3000)
+
+# CI/CD Pipeline Variables (Set by webhook server)
+CLAUDE_TRIGGER=true  # Indicates webhook-triggered execution
+CI_PROJECT_ID=gitlab_project_id
+CI_MERGE_REQUEST_IID=merge_request_id  # If applicable
+CLAUDE_RESOURCE_ID=issue_or_mr_id
 ```
 
 ## Claude AI Integration
@@ -286,34 +321,60 @@ bun run typecheck
 
 ## Deployment Options
 
-### GitLab CI/CD Integration
+### Webhook Server Deployment
 
-Deploy as part of GitLab CI/CD pipelines using the published npm package or Docker images.
+The primary deployment is the webhook server that handles GitLab integrations:
+
+```bash
+# Production deployment with Docker Compose
+cd gitlab-app
+docker-compose up -d
+
+# Development deployment
+cd gitlab-app
+bun install
+bun run dev
+```
 
 ### Self-Hosted GitLab
 
-Compatible with self-hosted GitLab instances:
+Fully compatible with self-hosted GitLab instances:
 
-- Configure `CI_SERVER_URL` for your GitLab instance
-- Set up OAuth applications in GitLab admin
-- Configure webhook endpoints
-- Ensure network connectivity for API calls
+- Configure webhook endpoints to point to your webhook server
+- Set `GITLAB_TOKEN` for API access to your GitLab instance
+- Configure webhook secrets for HMAC validation
+- Ensure network connectivity between webhook server and GitLab
 
 ### Container Deployment
 
 ```bash
-# Using published package
-npx @hyperremix/claude-code-for-gitlab
+# Build and run webhook server
+cd gitlab-app
+docker build -t claude-webhook-server .
+docker run -p 3000:3000 \
+  -e GITLAB_TOKEN=$GITLAB_TOKEN \
+  -e WEBHOOK_SECRET=$WEBHOOK_SECRET \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  claude-webhook-server
 
-# Using Docker
-docker run -e GITLAB_TOKEN=$TOKEN hyperremix/claude-code-for-gitlab
+# Using Docker Compose (recommended)
+docker-compose up -d
 ```
+
+### Scaling and High Availability
+
+- **Load Balancing**: Deploy multiple webhook server instances behind a load balancer
+- **Redis Clustering**: Use Redis clusters for distributed rate limiting
+- **Health Checks**: Built-in health check endpoints for monitoring
+- **Graceful Shutdown**: Proper signal handling for zero-downtime deployments
 
 ## Important Implementation Notes
 
-- **GitLab-Only Architecture**: Simplified from dual-platform to GitLab-focused
-- **No Database Required**: Uses GitLab API and CI/CD environment variables
-- **Webhook-Driven**: Real-time responses via GitLab webhooks
-- **Security-First**: Configurable tool permissions and authentication methods
-- **CI/CD Native**: Designed to work seamlessly in GitLab pipelines
-- **Self-Contained**: Minimal external dependencies, works in containerized environments
+- **Webhook-Only Architecture**: Streamlined single-path integration via webhook server
+- **No Database Required**: Uses GitLab API, Redis for rate limiting, and CI/CD environment variables
+- **Event-Driven**: Real-time responses via GitLab webhook events (@claude mentions)
+- **Security-First**: HMAC webhook validation, rate limiting, and configurable permissions
+- **Stateless Design**: Webhook server is stateless and horizontally scalable
+- **GitLab-Native**: Designed specifically for GitLab workflows and CI/CD pipelines
+- **Self-Contained**: Minimal external dependencies, containerized deployment ready
+- **Rate Limited**: Built-in protection against abuse (3 triggers per user per resource per 15 minutes)

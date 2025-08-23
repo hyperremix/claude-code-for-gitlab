@@ -2,7 +2,7 @@
 
 # 🦊 Claude Code for GitLab
 
-A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that brings AI-powered assistance to GitLab merge requests and issues. This project enables Claude to respond to mentions in GitLab comments, implement code changes, and provide intelligent code assistance directly within your GitLab workflow.
+A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that brings AI-powered assistance to GitLab merge requests and issues through a **webhook-only architecture**. This project enables Claude to respond to mentions in GitLab comments, implement code changes, and provide intelligent code assistance directly within your GitLab workflow.
 
 ## Key Features
 
@@ -10,14 +10,25 @@ A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that b
 - 🔍 **Code Review**: Analyzes MR changes and suggests improvements
 - ✨ **Code Implementation**: Can implement simple fixes, refactoring, and even new features
 - 💬 **MR/Issue Integration**: Works seamlessly with GitLab comments and merge request reviews
-- 🛠️ **Flexible Tool Access**: Access to GitLab APIs and file operations
+- 🛠️ **Webhook-Driven**: Reliable webhook server architecture for real-time responses
 - 📋 **Progress Tracking**: Real-time updates in GitLab comments as Claude completes tasks
 - 🏃 **Runs on Your Infrastructure**: Executes entirely in your GitLab runners
 - 🏢 **Enterprise Ready**: Full support for self-hosted GitLab instances with custom domains
 
-## GitLab Quick Start
+## Webhook-Only Architecture
 
-### Step 1: Deploy Webhook Service
+Claude Code for GitLab uses a **webhook-only architecture** that provides:
+
+- **Simplified Setup** - Single webhook server handles all GitLab integration
+- **Reliable Triggering** - Direct webhook events ensure consistent operation
+- **Rate Limiting** - Built-in rate limiting (3 triggers per user per resource per 15 minutes)
+- **Branch Management** - Automatic branch creation for issues
+- **Pipeline Management** - Cancels old pipelines and starts new ones
+- **Discord Integration** - Optional Discord notifications for results
+
+## Quick Start
+
+### Step 1: Deploy Webhook Server
 
 Deploy the webhook service for real-time responses to GitLab mentions:
 
@@ -32,9 +43,14 @@ docker run -d \
   ghcr.io/hyperremix/claude-code-gitlab-app:latest
 ```
 
-Then configure webhooks in your GitLab project settings. See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for detailed instructions.
+### Step 2: Configure GitLab Webhooks
 
-### Step 2: Configure GitLab CI/CD
+1. Go to your GitLab project's **Settings > Webhooks**
+2. Add your webhook server URL
+3. Configure events: **Issues events**, **Merge request events**, **Note events**
+4. Set your webhook secret (same as configured in the webhook server)
+
+### Step 3: Configure GitLab CI/CD Pipeline
 
 Add to your `.gitlab-ci.yml`:
 
@@ -47,37 +63,41 @@ variables:
   # Or use: ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
 ```
 
-**Requirements**:
+### Step 4: Start Using Claude
 
-- GitLab Runner with Docker executor
-- Claude authentication (API key or OAuth token)
-- Developer or higher permissions in the GitLab project
+1. Create an issue or merge request in your GitLab project
+2. Comment `@claude` with your request
+3. The webhook server will automatically trigger your CI/CD pipeline
+4. Claude will respond with progress updates and results
 
 ## Detailed Setup Instructions
 
-### Setting Up GitLab Variables
+### Webhook Server Configuration
 
-1. **Navigate to your GitLab project**
-2. Go to **Settings** → **CI/CD** → **Variables**
-3. Add the following variables:
-   - `CLAUDE_CODE_OAUTH_TOKEN`: Your Claude OAuth token (Pro/Max users can generate this by running `claude setup-token` locally)
-   - OR `ANTHROPIC_API_KEY`: Your Anthropic API key
-   - `CLAUDE_CODE_GL_ACCESS_TOKEN`: GitLab personal access token with `api` scope (for posting comments)
-
-### Webhook Service Configuration
-
-For the webhook service, you'll also need:
+For the webhook service, configure these environment variables:
 
 - `GITLAB_TOKEN`: Personal access token with `api` scope
 - `WEBHOOK_SECRET`: A random secret for webhook validation
 - `GITLAB_URL`: Your GitLab instance URL (defaults to <https://gitlab.com>)
+- `ANTHROPIC_API_KEY`: Your Anthropic API key
+- `DISCORD_WEBHOOK_URL`: (Optional) Discord webhook for notifications
 
-See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for complete setup instructions including:
+### GitLab CI/CD Variables
 
-- Creating GitLab OAuth applications
-- Configuring webhooks
-- Setting up for self-hosted GitLab instances
-- Docker deployment options
+Set up these variables in your GitLab project's **Settings** → **CI/CD** → **Variables**:
+
+1. **Authentication** (choose one):
+   - `CLAUDE_CODE_OAUTH_TOKEN`: Your Claude OAuth token (Pro/Max users)
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+2. **GitLab Access**:
+   - `CLAUDE_CODE_GL_ACCESS_TOKEN`: GitLab personal access token with `api` scope
+
+### Requirements
+
+- GitLab Runner with Docker executor
+- Claude authentication (API key or OAuth token)
+- Developer or higher permissions in the GitLab project
+- Deployed webhook server with network access to GitLab
 
 ## Configuration Options
 
@@ -99,9 +119,6 @@ See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for complete setup 
 | `allowed_tools`           | Additional tools for Claude to use (the base GitLab tools will always be included)                    | No       | ""        |
 | `disallowed_tools`        | Tools that Claude should never use                                                                    | No       | ""        |
 | `custom_instructions`     | Additional custom instructions to include in the prompt for Claude                                    | No       | ""        |
-| `mcp_config`              | Additional MCP configuration (JSON string) that merges with the built-in GitLab MCP servers           | No       | ""        |
-| `assignee_trigger`        | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment         | No       | -         |
-| `label_trigger`           | The label name that triggers the action when applied to an issue (e.g. "claude")                      | No       | -         |
 | `trigger_phrase`          | The trigger phrase to look for in comments, issue/MR bodies, and issue titles                         | No       | `@claude` |
 | `branch_prefix`           | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)          | No       | `claude/` |
 | `claude_env`              | Custom environment variables to pass to Claude Code execution (YAML format)                           | No       | ""        |
@@ -109,15 +126,24 @@ See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for complete setup 
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
+## How the Webhook Architecture Works
+
+1. **Webhook Trigger**: GitLab sends webhook events to your deployed webhook server
+2. **Event Processing**: The webhook server validates the trigger phrase (`@claude` by default)
+3. **Pipeline Triggering**: The webhook server triggers your GitLab CI/CD pipeline with context
+4. **Claude Execution**: The pipeline runs Claude with the provided context
+5. **Results**: Claude posts progress and results back to the GitLab issue/MR
+
+This architecture provides:
+
+- **Reliability**: Webhook events are more reliable than polling or scheduled triggers
+- **Performance**: Immediate response to user interactions
+- **Scalability**: The webhook server can handle multiple projects and repositories
+- **Security**: Proper webhook validation and rate limiting
+
 ## Examples
 
-### Ways to Tag @claude
-
-These examples show how to interact with Claude using comments in MRs and issues. By default, Claude will be triggered anytime you mention `@claude`, but you can customize the exact trigger phrase using the `trigger_phrase` configuration.
-
-Claude will see the full MR context, including any comments.
-
-#### Ask Questions
+### Basic Usage
 
 Add a comment to an MR or issue:
 
@@ -127,7 +153,7 @@ Add a comment to an MR or issue:
 
 Claude will analyze the code and provide a detailed explanation with suggestions.
 
-#### Request Fixes
+### Request Implementation
 
 Ask Claude to implement specific changes:
 
@@ -135,7 +161,7 @@ Ask Claude to implement specific changes:
 @claude Can you add error handling to this function?
 ```
 
-#### Code Review
+### Code Review
 
 Get a thorough review:
 
@@ -143,9 +169,7 @@ Get a thorough review:
 @claude Please review this MR and suggest improvements
 ```
 
-Claude will analyze the changes and provide feedback.
-
-#### Fix Bugs from Screenshots
+### Fix Bugs from Screenshots
 
 Upload a screenshot of a bug and ask Claude to fix it:
 
@@ -154,74 +178,6 @@ Upload a screenshot of a bug and ask Claude to fix it:
 ```
 
 Claude can see and analyze images, making it easy to fix visual bugs or UI issues.
-
-### Custom Automations
-
-These examples show how to configure Claude to act automatically based on GitLab events, without requiring manual @mentions.
-
-#### Automated Documentation Updates
-
-Automatically update documentation when specific files change:
-
-```yaml
-variables:
-  DIRECT_PROMPT: |
-    Update the API documentation in README.md to reflect
-    the changes made to the API endpoints in this MR.
-
-rules:
-  - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    changes:
-      - "src/api/**/*.ts"
-```
-
-When API files are modified, Claude automatically updates your README with the latest endpoint documentation and pushes the changes back to the MR.
-
-#### Author-Specific Code Reviews
-
-Automatically review MRs from specific authors or external contributors:
-
-```yaml
-variables:
-  DIRECT_PROMPT: |
-    Please provide a thorough review of this merge request.
-    Pay extra attention to coding standards, security practices,
-    and test coverage since this is from an external contributor.
-
-rules:
-  - if: "$CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID"
-```
-
-Perfect for automatically reviewing MRs from external contributors or when you need extra guidance.
-
-#### Custom Prompt Templates
-
-Use `override_prompt` for complete control over Claude's behavior with variable substitution:
-
-```yaml
-variables:
-  OVERRIDE_PROMPT: |
-    Analyze MR !$CI_MERGE_REQUEST_IID in $CI_PROJECT_PATH for security vulnerabilities.
-
-    Changed files:
-    $CHANGED_FILES
-
-    Focus on:
-    - SQL injection risks
-    - XSS vulnerabilities
-    - Authentication bypasses
-    - Exposed secrets or credentials
-
-    Provide severity ratings (Critical/High/Medium/Low) for any issues found.
-```
-
-## How It Works
-
-1. **Trigger Detection**: Listens for comments containing the trigger phrase (default: `@claude`) or issue assignment to a specific user
-2. **Context Gathering**: Analyzes the MR/issue, comments, code changes
-3. **Smart Responses**: Either answers questions or implements changes
-4. **Branch Management**: Creates new MRs for human authors, pushes directly for Claude's own MRs
-5. **Communication**: Posts updates at every step to keep you informed
 
 ## Capabilities and Limitations
 
@@ -246,95 +202,44 @@ variables:
 - **Run Arbitrary Bash Commands**: By default, Claude cannot execute Bash commands unless explicitly allowed using the `allowed_tools` configuration
 - **Perform Branch Operations**: Cannot merge branches, rebase, or perform other git operations beyond pushing commits
 
-## Advanced Configuration
+## Security
 
-### Custom Environment Variables
+### Access Control
 
-You can pass custom environment variables to Claude Code execution using the `claude_env` configuration:
+- **Repository Access**: The action can only be triggered by users with developer access or higher to the GitLab project
+- **Token Permissions**: The GitLab token receives only the necessary permissions scoped specifically to the project it's operating in
+- **No Cross-Repository Access**: Each action invocation is limited to the repository where it was triggered
+- **Limited Scope**: The token cannot access other repositories or perform actions beyond the configured permissions
+- **Webhook Validation**: All webhook requests are validated using HMAC signatures
+- **Rate Limiting**: Built-in rate limiting prevents abuse
 
-```yaml
-variables:
-  CLAUDE_ENV: |
-    NODE_ENV: test
-    CI: true
-    DATABASE_URL: postgres://test:test@localhost:5432/test_db
-```
+### ⚠️ Authentication Protection
 
-The `claude_env` input accepts YAML format where each line defines a key-value pair. These environment variables will be available to Claude Code during execution.
+**CRITICAL: Never hardcode your Anthropic API key or OAuth token in GitLab CI files!**
 
-### Limiting Conversation Turns
-
-You can use the `max_turns` parameter to limit the number of back-and-forth exchanges Claude can have during task execution:
+Your authentication credentials must always be stored in GitLab CI/CD variables to prevent unauthorized access:
 
 ```yaml
+# CORRECT ✅
 variables:
-  MAX_TURNS: "5" # Limit to 5 conversation turns
+  ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+  # OR
+  CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
+
+# NEVER DO THIS ❌
+variables:
+  ANTHROPIC_API_KEY: "sk-ant-api03-..." # Exposed and vulnerable!
 ```
 
-When the turn limit is reached, Claude will stop execution gracefully.
+### Best Practices for Authentication
 
-### Custom Tools
-
-By default, Claude only has access to:
-
-- File operations (reading, committing, editing files, read-only git commands)
-- Comment management (creating/updating comments)
-- Basic GitLab operations
-
-Claude does **not** have access to execute arbitrary Bash commands by default. If you want Claude to run specific commands (e.g., npm install, npm test), you must explicitly allow them using the `allowed_tools` configuration:
-
-```yaml
-variables:
-  ALLOWED_TOOLS: |
-    Bash(npm install)
-    Bash(npm run test)
-    Edit
-    Replace
-  DISALLOWED_TOOLS: |
-    TaskOutput
-    KillTask
-```
-
-### Custom Model
-
-Use a specific Claude model:
-
-```yaml
-variables:
-  MODEL: "claude-3-5-sonnet-20241022"
-```
-
-### Network Restrictions
-
-For enhanced security, you can restrict Claude's network access to specific domains only:
-
-```yaml
-variables:
-  EXPERIMENTAL_ALLOWED_DOMAINS: |
-    .anthropic.com
-    .gitlab.com
-    .gitlab.company.com
-```
-
-### Claude Code Settings
-
-You can provide Claude Code settings to customize behavior such as model selection, environment variables, permissions, and hooks:
-
-```yaml
-variables:
-  SETTINGS: |
-    {
-      "model": "claude-opus-4-20250514",
-      "env": {
-        "DEBUG": "true",
-        "API_URL": "https://api.example.com"
-      },
-      "permissions": {
-        "allow": ["Bash", "Read"],
-        "deny": ["WebFetch"]
-      }
-    }
-```
+1. ✅ Always use `$ANTHROPIC_API_KEY` or `$CLAUDE_CODE_OAUTH_TOKEN` in CI files
+2. ✅ Never commit API keys or tokens to version control
+3. ✅ Regularly rotate your API keys and tokens
+4. ✅ Use group-level variables for organization-wide access
+5. ✅ Secure your webhook server with proper HTTPS and firewall rules
+6. ❌ Never share API keys or tokens in merge requests or issues
+7. ❌ Avoid logging variables that might contain keys
 
 ## Cloud Providers
 
@@ -364,54 +269,6 @@ variables:
   USE_VERTEX: "true"
 ```
 
-## Security
-
-### Access Control
-
-- **Repository Access**: The action can only be triggered by users with developer access or higher to the GitLab project
-- **Token Permissions**: The GitLab token receives only the necessary permissions scoped specifically to the project it's operating in
-- **No Cross-Repository Access**: Each action invocation is limited to the repository where it was triggered
-- **Limited Scope**: The token cannot access other repositories or perform actions beyond the configured permissions
-
-### ⚠️ Authentication Protection
-
-**CRITICAL: Never hardcode your Anthropic API key or OAuth token in GitLab CI files!**
-
-Your authentication credentials must always be stored in GitLab CI/CD variables to prevent unauthorized access:
-
-```yaml
-# CORRECT ✅
-variables:
-  ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
-  # OR
-  CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
-
-# NEVER DO THIS ❌
-variables:
-  ANTHROPIC_API_KEY: "sk-ant-api03-..." # Exposed and vulnerable!
-```
-
-### Setting Up GitLab CI/CD Variables
-
-1. Go to your GitLab project's Settings
-2. Click on "CI/CD"
-3. Expand "Variables"
-4. Click "Add variable"
-5. For authentication, choose one:
-   - API Key: Key: `ANTHROPIC_API_KEY`, Value: Your Anthropic API key (starting with `sk-ant-`)
-   - OAuth Token: Key: `CLAUDE_CODE_OAUTH_TOKEN`, Value: Your Claude Code OAuth token
-6. Make sure to mark the variable as "Protected" and "Masked" for security
-7. Click "Add variable"
-
-### Best Practices for Authentication
-
-1. ✅ Always use `$ANTHROPIC_API_KEY` or `$CLAUDE_CODE_OAUTH_TOKEN` in CI files
-2. ✅ Never commit API keys or tokens to version control
-3. ✅ Regularly rotate your API keys and tokens
-4. ✅ Use group-level variables for organization-wide access
-5. ❌ Never share API keys or tokens in merge requests or issues
-6. ❌ Avoid logging variables that might contain keys
-
 ## 📚 FAQ
 
 Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md) for solutions to common problems and detailed explanations of Claude's capabilities and limitations.
@@ -420,10 +277,10 @@ Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md)
 
 For full documentation including all configuration options, advanced features, and troubleshooting:
 
-- 🦊 **[GitLab Webhook Service Documentation](./gitlab-app/README.md)** - Complete guide for the webhook service
+- 🦊 **[Webhook Server Documentation](./gitlab-app/README.md)** - Complete guide for the webhook server
 - 📚 **[GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md)** - Detailed setup instructions for GitLab
 - 🔧 **[GitLab Token Troubleshooting](./docs/GITLAB_TOKEN_TROUBLESHOOTING.md)** - Common authentication issues and solutions
-- 🚀 **[GitLab Examples](./examples/gitlab/)** - Sample configurations and use cases
+- 🚀 **[Examples and Configuration](./examples/README.md)** - Sample configurations and use cases
 
 ## License
 
