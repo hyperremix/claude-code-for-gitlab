@@ -2,22 +2,14 @@
 
 ## Overview
 
-This project uses a centralized approach for handling temporary directories across GitHub Actions and GitLab CI environments, replacing the GitHub-specific `RUNNER_TEMP` with platform-agnostic utilities.
+This project uses a centralized approach for handling temporary directories in GitLab CI environments, providing consistent directory management for Claude Code execution.
 
-## Platform Differences
+## GitLab CI Implementation
 
-### GitHub Actions
-
-- Provides `RUNNER_TEMP` environment variable
-- Points to a temporary directory on the runner
-- Automatically cleaned up after job completion
-
-### GitLab CI
-
-- No direct equivalent to `RUNNER_TEMP`
 - `CI_BUILDS_DIR` is the main workspace directory
 - We create `.claude-temp` subdirectory within `CI_BUILDS_DIR`
 - Falls back to `/tmp` if `CI_BUILDS_DIR` is not available
+- Provides consistent paths for Claude prompts and execution output
 
 ## TypeScript Utility
 
@@ -30,23 +22,6 @@ const tempDir = getTempDirectory();
 // Get specific subdirectories (auto-created)
 const promptsDir = getClaudePromptsDirectory();
 const outputPath = getClaudeExecutionOutputPath();
-const logsDir = getGitHubCILogsDirectory();
-
-// Detect current CI platform
-const platform = detectCIPlatform(); // 'github' | 'gitlab' | 'unknown'
-```
-
-## Shell Script Utility
-
-For shell scripts, use `scripts/get-temp-directory.sh`:
-
-```bash
-# Source the utility
-source scripts/get-temp-directory.sh
-
-# Use the TEMP_DIR variable
-echo "Temp directory: $TEMP_DIR"
-echo "Source: $TEMP_SOURCE"  # Shows which env var was used
 ```
 
 ## Migration Guide
@@ -64,50 +39,26 @@ import { getClaudePromptsDirectory } from "../utils/temp-directory";
 const path = getClaudePromptsDirectory();
 ```
 
-### Shell Scripts
-
-Replace `RUNNER_TEMP` checks:
-
-```bash
-# Before
-if [ -z "$RUNNER_TEMP" ]; then
-  echo "ERROR: RUNNER_TEMP required"
-  exit 1
-fi
-echo "file" > $RUNNER_TEMP/myfile.txt
-
-# After
-source scripts/get-temp-directory.sh
-echo "file" > $TEMP_DIR/myfile.txt
-```
-
 ## Directory Structure
 
 The following directories are created under the temp directory:
 
 - `/claude-prompts/` - Stores Claude prompt files
-- `/github-ci-logs/` - Stores CI log files (GitHub Actions)
 - `/.claude-temp/` - GitLab-specific subdirectory within CI_BUILDS_DIR
 
 ## Files Updated
 
 The following files have been updated to use the centralized temp directory:
 
-### TypeScript:
+### TypeScript
 
-- `src/utils/temp-directory.ts` - Main utility (new)
-- `base-action/src/run-claude.ts` - Uses inline fallback
-- `src/mcp/install-mcp-server.ts` - Uses utility
-- `src/mcp/github-actions-server.ts` - Uses utility
-- `src/create-prompt/index.ts` - Uses utility
+- `src/utils/temp-directory.ts` - Main utility
 - `src/entrypoints/prepare.ts` - Uses utility
 - `src/entrypoints/gitlab_entrypoint.ts` - Uses utility
 
-### Shell Scripts:
+### Shell Scripts
 
-- `scripts/get-temp-directory.sh` - Shell utility (new)
-- `scripts/setup-network-restrictions-unified.sh` - Updated version (new)
-- `scripts/setup-network-restrictions.sh` - Original (still uses RUNNER_TEMP)
+- `scripts/setup-network-restrictions-unified.sh` - Uses inline temp directory logic
 
 ## Best Practices
 

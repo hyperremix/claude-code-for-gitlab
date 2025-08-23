@@ -1,7 +1,7 @@
 # Claude Code for GitLab - Remote Include Configuration
 # Usage: Add this to your .gitlab-ci.yml:
 # include:
-#   - remote: 'https://raw.githubusercontent.com/RealMikeChong/claude-code-for-gitlab/main/examples/gitlab/include/claude-code.gitlab-ci.yml'
+#   - remote: 'https://raw.githubusercontent.com/hyperremix/claude-code-for-gitlab/main/examples/gitlab/include/claude-code.gitlab-ci.yml'
 
 .claude_code_template:
   image: oven/bun:1.1.29-alpine
@@ -11,7 +11,7 @@
     - apk add --no-cache git openssh-client curl
 
     # Clone Claude Code for GitLab
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install --frozen-lockfile
 
@@ -23,7 +23,7 @@
     - cd $CI_PROJECT_DIR
 
   script:
-    # Run Claude Code action
+    # Run Claude Code for GitLab
     - cd /tmp/claude-code && bun run src/entrypoints/prepare.ts
 
   variables:

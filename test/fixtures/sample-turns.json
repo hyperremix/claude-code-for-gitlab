@@ -8,17 +8,9 @@
       "Bash",
       "Read",
       "Edit",
-      "Write",
-      "mcp__github__get_file_contents",
-      "mcp__github__create_or_update_file",
-      "mcp__github__add_pull_request_review_comment"
+      "Write"
     ],
-    "mcp_servers": [
-      {
-        "name": "github",
-        "status": "connected"
-      }
-    ]
+    "mcp_servers": []
   },
   {
     "type": "assistant",
@@ -122,46 +114,19 @@
       "content": [
         {
           "type": "text",
-          "text": "Perfect! I've successfully removed the debug print statement from the function. Let me now create a pull request comment to document this change."
-        },
-        {
-          "type": "tool_use",
-          "id": "tool_call_3",
-          "name": "mcp__github__add_pull_request_review_comment",
-          "input": {
-            "owner": "example-org",
-            "repo": "example-repo",
-            "pull_number": 123,
-            "body": "Removed debug print statement as requested.",
-            "commit_id": "abc123def456",
-            "path": "sample/file.py",
-            "line": 2
-          }
+          "text": "Perfect! I've successfully removed the debug print statement from the function. The code is now clean and ready for the merge request."
         }
       ],
-      "stop_reason": "tool_use",
+      "stop_reason": "end_turn",
       "stop_sequence": null,
       "usage": {
         "input_tokens": 150,
         "cache_creation_input_tokens": 0,
         "cache_read_input_tokens": 75,
-        "output_tokens": 80
+        "output_tokens": 30
       }
     },
     "session_id": "sample-session-id"
-  },
-  {
-    "type": "user",
-    "message": {
-      "content": [
-        {
-          "type": "tool_result",
-          "tool_use_id": "tool_call_3",
-          "content": "Successfully posted review comment to PR #123",
-          "is_error": false
-        }
-      ]
-    }
   },
   {
     "type": "assistant",
@@ -173,7 +138,7 @@
       "content": [
         {
           "type": "text",
-          "text": "Great! I've successfully completed the requested task:\n\n1. ✅ Located the debug print statement in the file\n2. ✅ Removed the print statement while preserving the function logic\n3. ✅ Added a review comment documenting the change\n\nThe debug print statement has been removed as requested by the reviewers."
+          "text": "Great! I've successfully completed the requested task:\n\n1. ✅ Located the debug print statement in the file\n2. ✅ Removed the print statement while preserving the function logic\n\nThe debug print statement has been removed as requested."
         }
       ],
       "stop_reason": "end_turn",
@@ -182,15 +147,15 @@
         "input_tokens": 180,
         "cache_creation_input_tokens": 0,
         "cache_read_input_tokens": 90,
-        "output_tokens": 60
+        "output_tokens": 50
       }
     },
     "session_id": "sample-session-id"
   },
   {
     "type": "result",
-    "cost_usd": 0.0347,
-    "duration_ms": 18750,
-    "result": "Successfully removed debug print statement from file and added review comment to document the change."
+    "cost_usd": 0.0295,
+    "duration_ms": 15500,
+    "result": "Successfully removed debug print statement from file."
   }
 ]

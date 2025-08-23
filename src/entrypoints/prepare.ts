@@ -5,172 +5,42 @@
  * and creating the initial tracking comment
  */
 
-import * as core from "@actions/core";
-import { setupGitHubToken } from "../github/token";
-import { checkHumanActor } from "../github/validation/actor";
-import { checkWritePermissions } from "../github/validation/permissions";
-import { createInitialComment } from "../github/operations/comments/create-initial";
-import { setupBranch } from "../github/operations/branch";
-import { configureGitAuth } from "../github/operations/git-config";
-import { prepareMcpConfig } from "../mcp/install-mcp-server";
-import { createOctokit } from "../github/api/client";
-import { fetchGitHubData } from "../github/data/fetcher";
-import { parseGitHubContext } from "../github/context";
-import { getMode } from "../modes/registry";
-import { createPrompt } from "../create-prompt";
-import {
-  createProvider,
-  getToken,
-  detectPlatform,
-} from "../providers/provider-factory";
+import { parseGitLabWebhookPayload } from "../gitlab/webhook";
+import { createProvider, getToken } from "../providers/provider-factory";
 import type { SCMProvider } from "../providers/scm-provider";
 import { getClaudePromptsDirectory } from "../utils/temp-directory";
-import { parseGitLabWebhookPayload } from "../gitlab/webhook";
 
 async function run() {
-  const platform = detectPlatform();
-
   // Debug environment variables related to authentication
-  if (platform === "gitlab") {
-    console.log("=== GitLab Environment Variables Debug ===");
-    const authVars = [
-      "CLAUDE_CODE_GL_ACCESS_TOKEN",
-      "CLAUDE_CODE_OAUTH_TOKEN",
-      "GITLAB_TOKEN",
-      "CI_JOB_TOKEN",
-    ];
+  console.log("=== GitLab Environment Variables Debug ===");
+  const authVars = [
+    "CLAUDE_CODE_GL_ACCESS_TOKEN",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "GITLAB_TOKEN",
+    "CI_JOB_TOKEN",
+  ];
 
-    authVars.forEach((varName) => {
-      const value = process.env[varName];
-      if (value) {
-        if (value.startsWith("$")) {
-          console.log(
-            `${varName}: UNEXPANDED ("${value}") - Variable not set in CI/CD settings!`,
-          );
-        } else {
-          console.log(
-            `${varName}: Set (length: ${value.length}, prefix: "${value.substring(0, 8)}...")`,
-          );
-        }
+  authVars.forEach((varName) => {
+    const value = process.env[varName];
+    if (value) {
+      if (value.startsWith("$")) {
+        console.log(
+          `${varName}: UNEXPANDED ("${value}") - Variable not set in CI/CD settings!`,
+        );
       } else {
-        console.log(`${varName}: Not set`);
+        console.log(
+          `${varName}: Set (length: ${value.length}, prefix: "${value.substring(0, 8)}...")`,
+        );
       }
-    });
-    console.log("=========================================");
-  }
-
-  // Use platform-specific logic
-  if (platform === "gitlab") {
-    // GitLab mode - output platform using echo
-    console.log(`platform=${platform}`);
-    await runGitLab();
-  } else {
-    // GitHub mode - use core.setOutput
-    core.setOutput("platform", platform);
-    await runGitHub();
-  }
-}
-
-async function runGitHub() {
-  try {
-    // Step 1: Setup GitHub token
-    const githubToken = await setupGitHubToken();
-    const octokit = createOctokit(githubToken);
-
-    // Step 2: Parse GitHub context (once for all operations)
-    const context = parseGitHubContext();
-
-    // Step 3: Check write permissions
-    const hasWritePermissions = await checkWritePermissions(
-      octokit.rest,
-      context,
-    );
-    if (!hasWritePermissions) {
-      throw new Error(
-        "Actor does not have write permissions to the repository",
-      );
+    } else {
+      console.log(`${varName}: Not set`);
     }
+  });
+  console.log("=========================================");
 
-    // Step 4: Get mode and check trigger conditions
-    const mode = getMode(context.inputs.mode);
-    const containsTrigger = mode.shouldTrigger(context);
-
-    // Set output for action.yml to check
-    core.setOutput("contains_trigger", containsTrigger.toString());
-
-    if (!containsTrigger) {
-      console.log("No trigger found, skipping remaining steps");
-      return;
-    }
-
-    // Step 5: Check if actor is human
-    await checkHumanActor(octokit.rest, context);
-
-    // Step 6: Create initial tracking comment (mode-aware)
-    // Some modes (e.g., future review/freeform modes) may not need tracking comments
-    let commentId: number | undefined;
-    let commentData:
-      | Awaited<ReturnType<typeof createInitialComment>>
-      | undefined;
-    if (mode.shouldCreateTrackingComment()) {
-      commentData = await createInitialComment(octokit.rest, context);
-      commentId = commentData.id;
-    }
-
-    // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
-    const githubData = await fetchGitHubData({
-      octokits: octokit,
-      repository: `${context.repository.owner}/${context.repository.repo}`,
-      prNumber: context.entityNumber.toString(),
-      isPR: context.isPR,
-      triggerUsername: context.actor,
-    });
-
-    // Step 8: Setup branch
-    const branchInfo = await setupBranch(octokit, githubData, context);
-
-    // Step 9: Configure git authentication if not using commit signing
-    if (!context.inputs.useCommitSigning) {
-      try {
-        await configureGitAuth(githubToken, context, commentData?.user || null);
-      } catch (error) {
-        console.error("Failed to configure git authentication:", error);
-        throw error;
-      }
-    }
-
-    // Step 10: Create prompt file
-    const modeContext = mode.prepareContext(context, {
-      commentId,
-      baseBranch: branchInfo.baseBranch,
-      claudeBranch: branchInfo.claudeBranch,
-    });
-
-    await createPrompt(mode, modeContext, githubData, context);
-
-    // Step 11: Get MCP configuration
-    const additionalMcpConfig = process.env.MCP_CONFIG || "";
-    const mcpConfig = await prepareMcpConfig({
-      githubToken,
-      owner: context.repository.owner,
-      repo: context.repository.repo,
-      branch: branchInfo.claudeBranch || branchInfo.currentBranch,
-      baseBranch: branchInfo.baseBranch,
-      additionalMcpConfig,
-      claudeCommentId: commentId?.toString() || "",
-      allowedTools: context.inputs.allowedTools,
-      context,
-    });
-    core.setOutput("mcp_config", mcpConfig);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    core.setFailed(`Prepare step failed with error: ${errorMessage}`);
-
-    // Also output the clean error message for the action to capture
-    core.setOutput("prepare_error", errorMessage);
-
-    process.exit(1);
-  }
+  // Run GitLab logic
+  console.log(`platform=gitlab`);
+  await runGitLab();
 }
 
 async function runGitLab() {

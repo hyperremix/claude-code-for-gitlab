@@ -8,7 +8,7 @@ The GitLab CI job was only running the prepare step but not actually executing C
 
 1. **Prepare** - Creates initial comment, sets up context, generates prompt
 2. **Install Claude Code** - Installs the Claude Code CLI globally
-3. **Run Claude Code** - Executes Claude via the base-action
+3. **Run Claude Code** - Executes Claude Code CLI directly
 4. **Update Comment** - Updates the GitLab comment with results
 
 ## Using the Complete Configuration

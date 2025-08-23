@@ -1,5 +1,6 @@
+import { parseGitLabWebhookPayload } from "../../gitlab/context";
+import { checkContainsTrigger } from "../../gitlab/validation/trigger";
 import type { Mode } from "../types";
-import { checkContainsTrigger } from "../../github/validation/trigger";
 
 /**
  * Tag mode implementation.
@@ -12,14 +13,23 @@ export const tagMode: Mode = {
   name: "tag",
   description: "Traditional implementation mode triggered by @claude mentions",
 
-  shouldTrigger(context) {
-    return checkContainsTrigger(context);
+  shouldTrigger(_context) {
+    const payload = parseGitLabWebhookPayload();
+    if (!payload) {
+      return false;
+    }
+
+    return checkContainsTrigger({
+      payload,
+      triggerPhrase: "@claude", // Default trigger phrase
+      directPrompt: process.env.DIRECT_PROMPT,
+    });
   },
 
   prepareContext(context, data) {
     return {
       mode: "tag",
-      githubContext: context,
+      gitlabContext: context,
       commentId: data?.commentId,
       baseBranch: data?.baseBranch,
       claudeBranch: data?.claudeBranch,

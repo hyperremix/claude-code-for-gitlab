@@ -1,17 +1,22 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { ParsedGitLabContext } from "../../src/gitlab/context";
 import { tagMode } from "../../src/modes/tag";
-import type { ParsedGitHubContext } from "../../src/github/context";
-import type { IssueCommentEvent } from "@octokit/webhooks-types";
-import { createMockContext } from "../mockContext";
 
 describe("Tag Mode", () => {
-  let mockContext: ParsedGitHubContext;
+  let mockContext: ParsedGitLabContext;
 
   beforeEach(() => {
-    mockContext = createMockContext({
-      eventName: "issue_comment",
-      isPR: false,
-    });
+    mockContext = {
+      projectId: "123",
+      host: "https://gitlab.com",
+      commitSha: "abc123",
+      commitBranch: "main",
+      userName: "test-user",
+      userEmail: "test@example.com",
+      mrIid: "1",
+      issueIid: "1",
+      triggerSource: "web",
+    } as ParsedGitLabContext;
   });
 
   test("tag mode has correct properties", () => {
@@ -23,37 +28,38 @@ describe("Tag Mode", () => {
   });
 
   test("shouldTrigger delegates to checkContainsTrigger", () => {
-    const contextWithTrigger = createMockContext({
-      eventName: "issue_comment",
-      isPR: false,
-      inputs: {
-        ...createMockContext().inputs,
-        triggerPhrase: "@claude",
+    // Mock environment variables for GitLab webhook payload
+    const originalEnv = process.env.GITLAB_WEBHOOK_PAYLOAD;
+
+    // Test with trigger phrase
+    process.env.GITLAB_WEBHOOK_PAYLOAD = JSON.stringify({
+      object_kind: "note",
+      object_attributes: {
+        note: "Hey @claude, can you help?",
+        noteable_type: "MergeRequest",
       },
-      payload: {
-        comment: {
-          body: "Hey @claude, can you help?",
-        },
-      } as IssueCommentEvent,
     });
 
-    expect(tagMode.shouldTrigger(contextWithTrigger)).toBe(true);
+    expect(tagMode.shouldTrigger(mockContext)).toBe(true);
 
-    const contextWithoutTrigger = createMockContext({
-      eventName: "issue_comment",
-      isPR: false,
-      inputs: {
-        ...createMockContext().inputs,
-        triggerPhrase: "@claude",
+    // Test without trigger phrase
+    process.env.GITLAB_WEBHOOK_PAYLOAD = JSON.stringify({
+      object_kind: "note",
+      object_attributes: {
+        note: "This is just a regular comment",
       },
-      payload: {
-        comment: {
-          body: "This is just a regular comment",
-        },
-      } as IssueCommentEvent,
     });
 
-    expect(tagMode.shouldTrigger(contextWithoutTrigger)).toBe(false);
+    expect(tagMode.shouldTrigger(mockContext)).toBe(false);
+
+    // Test with no payload
+    delete process.env.GITLAB_WEBHOOK_PAYLOAD;
+    expect(tagMode.shouldTrigger(mockContext)).toBe(false);
+
+    // Restore original environment
+    if (originalEnv) {
+      process.env.GITLAB_WEBHOOK_PAYLOAD = originalEnv;
+    }
   });
 
   test("prepareContext includes all required data", () => {
@@ -66,7 +72,7 @@ describe("Tag Mode", () => {
     const context = tagMode.prepareContext(mockContext, data);
 
     expect(context.mode).toBe("tag");
-    expect(context.githubContext).toBe(mockContext);
+    expect(context.gitlabContext).toBe(mockContext);
     expect(context.commentId).toBe(123);
     expect(context.baseBranch).toBe("main");
     expect(context.claudeBranch).toBe("claude/fix-bug");
@@ -76,7 +82,7 @@ describe("Tag Mode", () => {
     const context = tagMode.prepareContext(mockContext);
 
     expect(context.mode).toBe("tag");
-    expect(context.githubContext).toBe(mockContext);
+    expect(context.gitlabContext).toBe(mockContext);
     expect(context.commentId).toBeUndefined();
     expect(context.baseBranch).toBeUndefined();
     expect(context.claudeBranch).toBeUndefined();

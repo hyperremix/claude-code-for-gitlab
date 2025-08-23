@@ -1,107 +1,84 @@
 # Frequently Asked Questions (FAQ)
 
-This FAQ addresses common questions and gotchas when using the Claude Code GitHub Action.
+This FAQ addresses common questions and gotchas when using Claude Code integration with GitLab.
 
 ## Triggering and Authentication
 
 ### Why doesn't tagging @claude from my automated workflow work?
 
-The `github-actions` user cannot trigger subsequent GitHub Actions workflows. This is a GitHub security feature to prevent infinite loops. To make this work, you need to use a Personal Access Token (PAT) instead, which will act as a regular user, or use a separate app token of your own. When posting a comment on an issue or PR from your workflow, use your PAT instead of the `GITHUB_TOKEN` generated in your workflow.
+GitLab CI/CD workflows can trigger Claude, but ensure you're using the correct authentication method. Use a GitLab Personal Access Token or Project Access Token with appropriate permissions rather than the default CI/CD token for more reliable triggering.
 
 ### Why does Claude say I don't have permission to trigger it?
 
-Only users with **write permissions** to the repository can trigger Claude. This is a security feature to prevent unauthorized use. Make sure the user commenting has at least write access to the repository.
+Only users with **Developer permissions** or higher to the repository can trigger Claude. This is a security feature to prevent unauthorized use. Make sure the user commenting has at least Developer access to the GitLab project.
 
 ### Why can't I assign @claude to an issue on my repository?
 
-If you're in a public repository, you should be able to assign to Claude without issue. If it's a private organization repository, you can only assign to users in your own organization, which Claude isn't. In this case, you'll need to make a custom user in that case.
+In GitLab, you can only assign issues to project members. Claude needs to be added as a project member (with at least Reporter permissions) to be assignable to issues. Alternatively, you can use mentions in comments instead of assignments.
 
-### Why am I getting OIDC authentication errors?
+### Why am I getting authentication errors?
 
-If you're using the default GitHub App authentication, you must add the `id-token: write` permission to your workflow:
+Ensure your GitLab token has the necessary scopes:
+
+- `api` scope for full API access
+- `read_user` for user information
+- `read_repository` for repository access
+- `write_repository` for creating commits and branches
+
+For GitLab CI/CD integration, add the token as a CI/CD variable:
 
 ```yaml
-permissions:
-  contents: read
-  id-token: write # Required for OIDC authentication
+variables:
+  GITLAB_TOKEN: $CLAUDE_CODE_GL_ACCESS_TOKEN
 ```
-
-The OIDC token is required in order for the Claude GitHub app to function. If you wish to not use the GitHub app, you can instead provide a `github_token` input to the action for Claude to operate with. See the [Claude Code permissions documentation][perms] for more.
 
 ## Claude's Capabilities and Limitations
 
-### Why won't Claude update workflow files when I ask it to?
+### Why won't Claude update GitLab CI/CD files when I ask it to?
 
-The GitHub App for Claude doesn't have workflow write access for security reasons. This prevents Claude from modifying CI/CD configurations that could potentially create unintended consequences. This is something we may reconsider in the future.
+For security reasons, Claude may be configured to avoid modifying CI/CD configurations that could potentially create unintended consequences. This is a configurable safety feature that can be adjusted based on your security requirements.
 
 ### Why won't Claude rebase my branch?
 
 By default, Claude only uses commit tools for non-destructive changes to the branch. Claude is configured to:
 
-- Never push to branches other than where it was invoked (either its own branch or the PR branch)
+- Never push to branches other than where it was invoked (either its own branch or the MR branch)
 - Never force push or perform destructive operations
 
-You can grant additional tools via the `allowed_tools` input if needed:
+You can grant additional tools via configuration if needed, but use with caution.
 
-```yaml
-allowed_tools: "Bash(git rebase:*)" # Use with caution
-```
+### Why won't Claude create a merge request?
 
-### Why won't Claude create a pull request?
+Claude doesn't create MRs by default. Instead, it pushes commits to a branch and provides a link to a pre-filled MR creation page. This approach ensures your repository's branch protection rules are still adhered to and gives you final control over MR creation.
 
-Claude doesn't create PRs by default. Instead, it pushes commits to a branch and provides a link to a pre-filled PR submission page. This approach ensures your repository's branch protection rules are still adhered to and gives you final control over PR creation.
+### Can Claude see my GitLab CI/CD results?
 
-### Can Claude see my GitHub Actions CI results?
+Yes! Claude can access GitLab CI/CD pipeline runs, job logs, and test results on the MR where it's tagged. This requires appropriate API permissions and token scopes.
 
-Yes! Claude can access GitHub Actions workflow runs, job logs, and test results on the PR where it's tagged. To enable this:
-
-1. Add `actions: read` permission to your workflow:
-
-   ```yaml
-   permissions:
-     contents: write
-     pull-requests: write
-     issues: write
-     actions: read
-   ```
-
-2. Configure the action with additional permissions:
-   ```yaml
-   - uses: anthropics/claude-code-action@beta
-     with:
-       additional_permissions: |
-         actions: read
-   ```
-
-Claude will then be able to analyze CI failures and help debug workflow issues. For running tests locally before commits, you can still instruct Claude to do so in your request.
+Claude can analyze CI failures and help debug pipeline issues. For running tests locally before commits, you can still instruct Claude to do so in your request.
 
 ### Why does Claude only update one comment instead of creating new ones?
 
-Claude is configured to update a single comment to avoid cluttering PR/issue discussions. All of Claude's responses, including progress updates and final results, will appear in the same comment with checkboxes showing task progress.
+Claude is configured to update a single comment to avoid cluttering MR/issue discussions. All of Claude's responses, including progress updates and final results, will appear in the same comment with checkboxes showing task progress.
 
 ## Branch and Commit Behavior
 
-### Why did Claude create a new branch when commenting on a closed PR?
+### Why did Claude create a new branch when commenting on a closed MR?
 
 Claude's branch behavior depends on the context:
 
-- **Open PRs**: Pushes directly to the existing PR branch
-- **Closed/Merged PRs**: Creates a new branch (cannot push to closed PR branches)
+- **Open MRs**: Pushes directly to the existing MR branch
+- **Closed/Merged MRs**: Creates a new branch (cannot push to closed MR branches)
 - **Issues**: Always creates a new branch with a timestamp
 
 ### Why are my commits shallow/missing history?
 
 For performance, Claude uses shallow clones:
 
-- PRs: `--depth=20` (last 20 commits)
-- New branches: `--depth=1` (single commit)
+- MRs: Limited depth for recent commits
+- New branches: Minimal history
 
-If you need full history, you can configure this in your workflow before calling Claude in the `actions/checkout` step.
-
-```
-- uses: actions/checkout@v4
-  depth: 0 # will fetch full repo history
-```
+If you need full history, this can be configured in your GitLab CI/CD setup.
 
 ## Configuration and Tools
 
@@ -109,67 +86,83 @@ If you need full history, you can configure this in your workflow before calling
 
 These inputs serve different purposes in how Claude responds:
 
-- **`direct_prompt`**: Bypasses trigger detection entirely. When provided, Claude executes this exact instruction regardless of comments or mentions. Perfect for automated workflows where you want Claude to perform a specific task on every run (e.g., "Update the API documentation based on changes in this PR").
+- **`direct_prompt`**: Bypasses trigger detection entirely. When provided, Claude executes this exact instruction regardless of comments or mentions. Perfect for automated workflows where you want Claude to perform a specific task on every run (e.g., "Update the API documentation based on changes in this MR").
 
-- **`custom_instructions`**: Additional context added to Claude's system prompt while still respecting normal triggers. These instructions modify Claude's behavior but don't replace the triggering comment. Use this to give Claude standing instructions like "You have been granted additional tools for ...".
-
-Example:
-
-```yaml
-# Using direct_prompt - runs automatically without @claude mention
-direct_prompt: "Review this PR for security vulnerabilities"
-
-# Using custom_instructions - still requires @claude trigger
-custom_instructions: "Focus on performance implications and suggest optimizations"
-```
+- **`custom_instructions`**: Additional context added to Claude's system prompt while still respecting normal triggers. These instructions modify Claude's behavior but don't replace the triggering comment. Use this to give Claude standing instructions like "Focus on performance implications and suggest optimizations".
 
 ### Why doesn't Claude execute my bash commands?
 
-The Bash tool is **disabled by default** for security. To enable individual bash commands:
-
-```yaml
-allowed_tools: "Bash(npm:*),Bash(git:*)" # Allows only npm and git commands
-```
+The Bash tool may be **disabled by default** for security. To enable specific bash commands, configure the allowed tools appropriately. Only enable what's necessary for your use case.
 
 ### Can Claude work across multiple repositories?
 
-No, Claude's GitHub app token is sandboxed to the current repository only. It cannot push to any other repositories. It can, however, read public repositories, but to get access to this, you must configure it with tools to do so.
+Claude's access is typically sandboxed to the current repository for security. It can read public repositories, but cross-repository operations require explicit configuration and appropriate permissions.
 
-## MCP Servers and Extended Functionality
+## GitLab Integration Features
 
-### What MCP servers are available by default?
+### What GitLab features does Claude support?
 
-Claude Code Action automatically configures two MCP servers:
+Claude integrates with various GitLab features:
 
-1. **GitHub MCP server**: For GitHub API operations
-2. **File operations server**: For advanced file manipulation
+1. **Merge Requests**: Comments, file changes, diff analysis
+2. **Issues**: Comments, descriptions, assignments
+3. **Wiki pages**: Content updates and improvements
+4. **CI/CD pipelines**: Log analysis and troubleshooting
+5. **Repository files**: Reading, editing, and creating files
 
-However, tools from these servers still need to be explicitly allowed via `allowed_tools`.
+### How does Claude handle GitLab webhooks?
+
+Claude processes GitLab webhooks in real-time for:
+
+- Issue comments and updates
+- Merge request comments and changes
+- Pipeline completion events
+- Push events (when configured)
 
 ## Troubleshooting
 
 ### How can I debug what Claude is doing?
 
-Check the GitHub Action log for Claude's run for the full execution trace.
+Check the GitLab CI/CD pipeline logs or webhook delivery logs in your GitLab project settings for Claude's execution trace.
 
 ### Why can't I trigger Claude with `@claude-mention` or `claude!`?
 
-The trigger uses word boundaries, so `@claude` must be a complete word. Variations like `@claude-bot`, `@claude!`, or `claude@mention` won't work unless you customize the `trigger_phrase`.
+The trigger uses word boundaries, so `@claude` must be a complete word. Variations like `@claude-bot`, `@claude!`, or `claude@mention` won't work unless you customize the trigger phrase in your configuration.
+
+### Why isn't Claude responding to my comments?
+
+Check the following:
+
+1. Ensure Claude is mentioned correctly (`@claude`)
+2. Verify your GitLab token has appropriate permissions
+3. Check that Claude has access to the repository
+4. Ensure webhooks are properly configured
+5. Verify the trigger phrase matches your configuration
+
+### How do I configure Claude for self-hosted GitLab?
+
+For self-hosted GitLab instances:
+
+1. Update the GitLab URL in your configuration
+2. Ensure your GitLab instance can reach Claude's webhook endpoints
+3. Configure appropriate SSL certificates if using HTTPS
+4. Set up OAuth applications in your GitLab admin panel
 
 ## Best Practices
 
-1. **Always specify permissions explicitly** in your workflow file
-2. **Use GitHub Secrets** for API keys - never hardcode them
-3. **Be specific with `allowed_tools`** - only enable what's necessary
-4. **Test in a separate branch** before using on important PRs
-5. **Monitor Claude's token usage** to avoid hitting API limits
+1. **Use specific GitLab tokens** with minimal required permissions
+2. **Store tokens securely** in GitLab CI/CD variables or secrets
+3. **Be specific with tool permissions** - only enable what's necessary
+4. **Test in a separate branch** before using on important MRs
+5. **Monitor Claude's API usage** to avoid hitting rate limits
 6. **Review Claude's changes** carefully before merging
+7. **Configure branch protection rules** to ensure code review
 
 ## Getting Help
 
 If you encounter issues not covered here:
 
-1. Check the [GitHub Issues](https://github.com/anthropics/claude-code-action/issues)
-2. Review the [example workflows](https://github.com/anthropics/claude-code-action#examples)
-
-[perms]: https://docs.anthropic.com/en/docs/claude-code/settings#permissions
+1. Check the GitLab project's issue tracker
+2. Review the [GitLab integration documentation](docs/)
+3. Check GitLab webhook delivery logs in your project settings
+4. Verify your GitLab token permissions and scopes

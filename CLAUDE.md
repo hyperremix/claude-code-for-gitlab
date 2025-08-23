@@ -4,42 +4,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **GitLab OAuth Application** that integrates Claude AI directly into GitLab workflows. It provides a web-based dashboard for managing Claude integration across multiple GitLab projects, with intelligent webhook handling for real-time responses to issues, merge requests, and comments.
+This is a **GitLab CI/CD Integration Tool** that enables Claude AI to work directly within GitLab workflows through CI/CD pipelines, webhook processing, and merge request automation. It provides intelligent code assistance, automated reviews, and AI-powered development support integrated into GitLab projects.
 
 ## Architecture
 
 ### Technology Stack
 
-- **Backend**: Node.js + Express.js + TypeScript
-- **Frontend**: React 18 + Vite + TypeScript
-- **Package Manager**: Bun (for dependency management)
-- **Runtime**: Node.js (for production deployment)
-- **Storage**: Encrypted JSON files (no database required)
-- **Authentication**: GitLab OAuth2 with session management
-- **Deployment**: Docker + Docker Compose with optional Cloudflare Tunnel
+- **Runtime**: Node.js + TypeScript
+- **Package Manager**: Bun (for dependency management and testing)
+- **GitLab Integration**: @gitbeaker/rest for GitLab API operations
+- **Authentication**: GitLab Personal Access Tokens and OAuth tokens
+- **CI/CD**: GitLab CI/CD pipeline integration
+- **Webhook Processing**: Real-time GitLab webhook handling
 
 ### Project Structure
 
-```
-gitlab-app/
-├── server/                    # Express.js backend
-│   ├── routes/               # API and auth routes
-│   ├── services/             # Claude AI integration
-│   ├── utils/                # Configuration and utilities
-│   └── server.ts             # Main server entry point
-├── client/                   # React frontend (SPA)
-│   ├── src/
-│   │   ├── components/       # Reusable React components
-│   │   ├── pages/            # Page components (Dashboard, Settings)
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── types/            # TypeScript type definitions
-│   │   └── utils/            # API client utilities
-│   ├── index.html            # HTML entry point
-│   ├── vite.config.ts        # Vite configuration
-│   └── package.json          # Client dependencies
-├── docker-compose.yml        # Multi-service deployment
-├── Dockerfile               # Multi-stage build
-└── package.json             # Server dependencies and scripts
+```bash
+src/
+├── entrypoints/              # Main entry points
+│   ├── gitlab_entrypoint.ts  # GitLab CI/CD entry point
+│   ├── prepare.ts            # Context preparation
+│   ├── format-turns.ts       # Conversation formatting
+│   └── update-comment-gitlab.ts # GitLab comment updates
+├── gitlab/                   # GitLab-specific integration
+│   ├── context.ts            # GitLab context parsing
+│   ├── webhook.ts            # Webhook handling
+│   ├── data/                 # Data fetching utilities
+│   └── validation/           # Trigger validation
+├── providers/                # SCM provider abstraction
+│   ├── gitlab-provider.ts    # GitLab API provider
+│   ├── provider-factory.ts   # Provider factory (GitLab-only)
+│   └── scm-provider.ts       # Provider interface
+├── modes/                    # Operation modes
+│   ├── registry.ts           # Mode registry
+│   ├── types.ts              # Mode type definitions
+│   └── tag/                  # Tag mode implementation
+├── utils/                    # Utility functions
+│   ├── retry.ts              # Retry mechanisms
+│   └── temp-directory.ts     # Temporary directory handling
+└── types/                    # Type definitions
+    └── gitbeaker.ts          # GitLab API types
+
+gitlab-app/                   # GitLab OAuth Application (separate component)
+├── src/                      # Application source
+├── docker-compose.yml        # Container deployment
+└── package.json              # Application dependencies
+
+examples/                     # GitLab CI/CD examples
+├── .gitlab-ci.yml            # Basic integration
+├── advanced-features.gitlab-ci.yml
+├── docker-integration.gitlab-ci.yml
+└── include/
+    └── claude-code.gitlab-ci.yml
+
+docs/                         # Documentation
+├── GITLAB_APP_SETUP.md       # OAuth app setup
+├── GITLAB_CLAUDE_EXECUTION_GUIDE.md
+├── GITLAB_MR_CREATION.md     # Merge request workflows
+└── GITLAB_TOKEN_TROUBLESHOOTING.md
 ```
 
 ## Development Environment
@@ -47,157 +69,251 @@ gitlab-app/
 ### Prerequisites
 
 - **Node.js**: v18.0.0 or higher
-- **Bun**: v1.0.0 or higher (for package management)
-- **Docker**: For containerized deployment
+- **Bun**: v1.0.0 or higher (for package management and testing)
+- **GitLab Access**: Personal Access Token or OAuth setup
 
 ### Setup and Installation
 
 ```bash
-# Install all dependencies (server + client)
-cd gitlab-app && bun run install:all
+# Install dependencies
+bun install
 
-# Or install separately
-bun install                    # Server dependencies
-cd client && bun install      # Client dependencies
+# Type checking
+bun run typecheck
+
+# Run tests
+bun test
+
+# Format code
+bun run format
 ```
 
 ### Development Commands
 
 ```bash
-# Development (runs both server and client in parallel)
-bun run dev:both              # Recommended for full-stack development
-bun run dev:server            # Backend only (port 3000)
-bun run dev:client            # Frontend only (port 5173)
+# Development and testing
+bun run typecheck          # TypeScript type checking
+bun test                   # Run test suite
+bun run format            # Code formatting with Prettier
+bun run format:check      # Check code formatting
 
-# Building
-bun run build                 # Build both server and client
-bun run build:server          # TypeScript compilation
-bun run build:client          # Vite production build
-
-# Type checking
-bun run typecheck             # Check both server and client
-
-# Production
-bun run start                 # Start production server
+# GitLab integration testing
+bun test test/gitlab/     # GitLab-specific tests
+bun test test/providers/  # Provider tests
 ```
-
-### Development Workflow
-
-1. **Backend Development**: Express server runs on `http://localhost:3000`
-2. **Frontend Development**: Vite dev server runs on `http://localhost:5173` with proxy to backend
-3. **Full-Stack**: Use `bun run dev:both` to run both servers simultaneously
 
 ## Key Components
 
-### Backend (Express.js)
+### GitLab Integration
 
-- **OAuth Routes** (`server/routes/auth.ts`): GitLab OAuth2 flow and session management
-- **API Routes** (`server/routes/api.ts`): Project management and configuration APIs
-- **Webhook Handler** (`server/routes/webhook.ts`): GitLab webhook processing
-- **Claude Integration** (`server/services/claude-handler.ts`): AI response generation
-- **Data Storage** (`server/utils/config.ts`): Encrypted JSON storage with AES encryption
+- **Context Parsing** (`src/gitlab/context.ts`): Parse GitLab CI/CD environment and webhook payloads
+- **Webhook Processing** (`src/gitlab/webhook.ts`): Handle GitLab webhook events
+- **Data Fetching** (`src/gitlab/data/fetcher.ts`): Retrieve GitLab project data
+- **Trigger Validation** (`src/gitlab/validation/trigger.ts`): Validate @claude mentions and triggers
 
-### Frontend (React SPA)
+### Provider System
 
-- **Authentication** (`client/src/hooks/useAuth.tsx`): Session-based auth with React Query
-- **Project Management** (`client/src/hooks/useProjects.tsx`): GitLab project integration
-- **Dashboard** (`client/src/pages/Dashboard.tsx`): Main project overview and management
-- **Settings** (`client/src/pages/ProjectSettings.tsx`): Per-project Claude configuration
-- **Components**: Reusable UI components with inline styling (no CSS framework dependency)
+- **GitLab Provider** (`src/providers/gitlab-provider.ts`): Complete GitLab API integration
+- **Provider Factory** (`src/providers/provider-factory.ts`): Creates GitLab provider instances
+- **SCM Interface** (`src/providers/scm-provider.ts`): Abstract provider interface
+
+### Entry Points
+
+- **GitLab Entry** (`src/entrypoints/gitlab_entrypoint.ts`): Main GitLab CI/CD integration point
+- **Preparation** (`src/entrypoints/prepare.ts`): Context and environment preparation
+- **Comment Updates** (`src/entrypoints/update-comment-gitlab.ts`): GitLab comment management
 
 ## Authentication & Security
 
-### GitLab OAuth2 Flow
+### GitLab Authentication
 
-1. User clicks "Login with GitLab" → redirects to GitLab OAuth
-2. GitLab redirects back with authorization code
-3. Server exchanges code for access/refresh tokens
-4. User session created with encrypted token storage
-5. React app receives user data via `/auth/me` endpoint
+Support for multiple authentication methods:
 
-### Data Encryption
+1. **Personal Access Tokens**: `GITLAB_TOKEN` environment variable
+2. **OAuth Tokens**: `CLAUDE_CODE_OAUTH_TOKEN` for app integration
+3. **GitLab Access Tokens**: `CLAUDE_CODE_GL_ACCESS_TOKEN` for enhanced access
+4. **CI/CD Variables**: `INPUT_GITLAB_TOKEN` for pipeline integration
 
-- **User tokens**: AES-256-GCM encryption for OAuth tokens
-- **Session data**: Express-session with configurable secrets
-- **Storage**: JSON files with encrypted sensitive fields
+### Token Priority Order
 
-### Security Features
+1. `CLAUDE_CODE_GL_ACCESS_TOKEN` (highest priority)
+2. `CLAUDE_CODE_OAUTH_TOKEN` or `INPUT_CLAUDE_CODE_OAUTH_TOKEN`
+3. `INPUT_GITLAB_TOKEN`
+4. `GITLAB_TOKEN` (fallback)
 
-- **CORS**: Configured for development and production origins
-- **Helmet**: Security headers and CSP policies
-- **Session Management**: HTTPOnly cookies with configurable expiration
-- **Token Refresh**: Automatic OAuth token renewal
+### Required GitLab Permissions
+
+- `api` scope for full API access
+- `read_user` for user information
+- `read_repository` for repository access
+- `write_repository` for creating commits and branches
+
+## GitLab CI/CD Integration
+
+### Basic Pipeline Integration
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - claude-review
+
+claude-code:
+  stage: claude-review
+  image: node:18
+  script:
+    - npx @hyperremix/claude-code-for-gitlab
+  variables:
+    GITLAB_TOKEN: $CLAUDE_CODE_GL_ACCESS_TOKEN
+  only:
+    - merge_requests
+```
+
+### Webhook Integration
+
+1. Configure GitLab webhooks to point to your Claude endpoint
+2. Set webhook triggers for:
+   - Merge request events
+   - Issue events
+   - Note (comment) events
+   - Pipeline events
+
+### Environment Variables
+
+```bash
+# Required
+GITLAB_TOKEN=your_gitlab_token
+CI_PROJECT_ID=gitlab_project_id
+
+# Optional
+CI_MERGE_REQUEST_IID=merge_request_id
+CI_SERVER_URL=https://gitlab.com
+CI_PIPELINE_URL=pipeline_url
+CLAUDE_RESOURCE_ID=issue_id
+```
 
 ## Claude AI Integration
 
-### Webhook Processing
+### Trigger Detection
 
-1. GitLab sends webhook to `/webhook/:projectId`
-2. Server validates webhook signature and processes event
-3. Claude handler analyzes event context (issue, MR, comment)
-4. If `@claude` mentioned, generates AI response
-5. Response posted back to GitLab via API
+Claude responds to mentions in:
+
+- Merge request comments
+- Issue comments
+- Merge request descriptions
+- Issue descriptions
+
+Default trigger phrase: `@claude`
+
+### Response Generation
+
+1. Parse GitLab context (MR, issue, CI/CD state)
+2. Gather relevant code files and changes
+3. Generate AI-powered response
+4. Post response as GitLab comment
+5. Create commits/branches as needed
 
 ### Configuration Options
 
-Per-project settings available in React dashboard:
+- **Trigger Phrase**: Customize mention trigger
+- **Direct Prompt**: Execute specific instructions automatically
+- **Custom Instructions**: Add context to AI responses
+- **Tool Permissions**: Control which tools Claude can use
 
-- **Trigger Phrase**: Customize mention trigger (default: `@claude`)
-- **System Prompt**: Project-specific AI instructions
-- **Auto-reply**: Enable/disable automatic responses
-- **Code Context**: Include relevant code files in AI context
-- **Max Context Files**: Limit number of files for context
+## GitLab Features Supported
 
-## Deployment
+### Merge Requests
 
-### Docker Deployment
+- Comment analysis and responses
+- Diff analysis and code review
+- Automated code improvements
+- Branch creation and commits
+- MR description updates
+
+### Issues
+
+- Comment responses
+- Issue analysis and solutions
+- Related code file examination
+- Automated issue resolution
+
+### CI/CD Integration
+
+- Pipeline log analysis
+- Build failure troubleshooting
+- Automated testing suggestions
+- Deployment assistance
+
+### Repository Operations
+
+- File reading and editing
+- Branch management
+- Commit creation
+- Code analysis across multiple files
+
+## Testing
+
+### Test Structure
 
 ```bash
-# Basic deployment
-docker-compose up -d
-
-# With Cloudflare Tunnel
-docker-compose --profile tunnel up -d
-
-# With Redis and monitoring
-docker-compose --profile full up -d
+test/
+├── gitlab/                 # GitLab integration tests
+│   ├── context.test.ts     # Context parsing
+│   ├── data-fetcher.test.ts
+│   └── trigger-validation.test.ts
+├── providers/              # Provider tests
+│   ├── gitlab-provider.test.ts
+│   ├── provider-factory.test.ts
+│   └── oauth-token.test.ts
+├── modes/                  # Mode tests
+└── fixtures/               # Test data and fixtures
 ```
 
-### Environment Configuration
-
-Required environment variables:
+### Running Tests
 
 ```bash
-# GitLab OAuth
-GITLAB_APP_ID=your_gitlab_app_id
-GITLAB_APP_SECRET=your_gitlab_app_secret
-GITLAB_URL=https://gitlab.com  # or your GitLab instance
+# All tests
+bun test
 
-# Claude AI (choose one)
-ANTHROPIC_API_KEY=your_anthropic_key
-CLAUDE_CODE_OAUTH_TOKEN=your_claude_oauth_token
+# GitLab-specific tests
+bun test test/gitlab/
 
-# Security
-SESSION_SECRET=random_secure_string
-ENCRYPTION_KEY=random_32_byte_key
+# Provider tests
+bun test test/providers/
 
-# Optional: Cloudflare Tunnel
-CLOUDFLARE_TUNNEL_TOKEN=your_tunnel_token
+# Type checking
+bun run typecheck
 ```
 
-### Production Considerations
+## Deployment Options
 
-- **Reverse Proxy**: Use Nginx or Cloudflare Tunnel for SSL termination
-- **Session Storage**: Consider Redis for multi-instance deployments
-- **Monitoring**: Optional Prometheus/Grafana stack included
-- **Backups**: Backup `./data` directory for user configurations
-- **Updates**: Use GitHub Container Registry images for updates
+### GitLab CI/CD Integration
+
+Deploy as part of GitLab CI/CD pipelines using the published npm package or Docker images.
+
+### Self-Hosted GitLab
+
+Compatible with self-hosted GitLab instances:
+
+- Configure `CI_SERVER_URL` for your GitLab instance
+- Set up OAuth applications in GitLab admin
+- Configure webhook endpoints
+- Ensure network connectivity for API calls
+
+### Container Deployment
+
+```bash
+# Using published package
+npx @hyperremix/claude-code-for-gitlab
+
+# Using Docker
+docker run -e GITLAB_TOKEN=$TOKEN hyperremix/claude-code-for-gitlab
+```
 
 ## Important Implementation Notes
 
-- **Hybrid Architecture**: Server-side OAuth with client-side React SPA
-- **No Database**: Uses encrypted JSON files for simplicity and portability
-- **Multi-Project**: Single installation supports unlimited GitLab projects
-- **Real-time**: Webhook-based responses for immediate AI assistance
-- **Responsive**: React frontend works on desktop and mobile devices
-- **Docker-First**: Designed for containerized deployment with Docker Compose
+- **GitLab-Only Architecture**: Simplified from dual-platform to GitLab-focused
+- **No Database Required**: Uses GitLab API and CI/CD environment variables
+- **Webhook-Driven**: Real-time responses via GitLab webhooks
+- **Security-First**: Configurable tool permissions and authentication methods
+- **CI/CD Native**: Designed to work seamlessly in GitLab pipelines
+- **Self-Contained**: Minimal external dependencies, works in containerized environments

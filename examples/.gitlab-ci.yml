@@ -1,4 +1,4 @@
-# GitLab CI/CD Configuration for Claude Code Action
+# GitLab CI/CD Configuration
 # This example shows how to use Claude Code in GitLab CI/CD pipelines
 
 variables:
@@ -23,13 +23,13 @@ variables:
     # Install dependencies
     - apk add --no-cache git openssh-client curl
     # Clone the Claude Code for GitLab repository
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install --frozen-lockfile
     # Copy current repository context
     - cd $CI_PROJECT_DIR
   script:
-    # Run Claude Code action from the cloned repository
+    # Run Claude Code for GitLab from the cloned repository
     - cd /tmp/claude-code && bun run src/entrypoints/prepare.ts
   only:
     # Only run on merge request events

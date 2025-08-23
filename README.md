@@ -1,40 +1,18 @@
-![Claude Code Action responding to a comment](https://github.com/user-attachments/assets/1d60c2e9-82ed-4ee5-b749-f9e021c85f4d)
+![Claude Code responding to a comment](./docs/assets/claude-code-response.png)
 
 # 🦊 Claude Code for GitLab
-
-## 🚨 THIS REPOSITORY IS FOR GITLAB INTEGRATION ONLY! 🚨
-
-### Looking for GitHub?
-
-👉 **GitHub users should use the official action: [anthropics/claude-code-action](https://github.com/anthropics/claude-code-action)**
-
----
-
-## What is this?
-
-**This is a GitLab-specific fork** that provides Claude Code integration for GitLab CI/CD pipelines and self-hosted GitLab instances. It includes:
-
-- 🦊 **Full GitLab CI/CD Support**: Native integration with GitLab pipelines
-- 🏢 **Self-Hosted GitLab**: Works with both GitLab.com and self-hosted instances
-- 🔐 **GitLab Authentication**: Uses GitLab OAuth apps and CI job tokens
-- 🪝 **Webhook Service**: Real-time response to GitLab issues and merge requests
-- 📦 **Docker Deployment**: Ready-to-deploy webhook service with Docker
-
-> **📚 GitLab Setup**: See the [GitLab Setup Guide](./docs/GITLAB_APP_SETUP.md) for GitLab-specific setup instructions and the [GitLab Token Troubleshooting Guide](./docs/GITLAB_TOKEN_TROUBLESHOOTING.md) if you encounter authentication issues.
-
-## Overview
 
 A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that brings AI-powered assistance to GitLab merge requests and issues. This project enables Claude to respond to mentions in GitLab comments, implement code changes, and provide intelligent code assistance directly within your GitLab workflow.
 
 ## Key Features
 
 - 🤖 **Interactive Code Assistant**: Claude can answer questions about code, architecture, and programming
-- 🔍 **Code Review**: Analyzes PR changes and suggests improvements
+- 🔍 **Code Review**: Analyzes MR changes and suggests improvements
 - ✨ **Code Implementation**: Can implement simple fixes, refactoring, and even new features
 - 💬 **MR/Issue Integration**: Works seamlessly with GitLab comments and merge request reviews
-- 🛠️ **Flexible Tool Access**: Access to GitLab APIs and file operations (additional tools can be enabled via configuration)
+- 🛠️ **Flexible Tool Access**: Access to GitLab APIs and file operations
 - 📋 **Progress Tracking**: Real-time updates in GitLab comments as Claude completes tasks
-- 🏃 **Runs on Your Infrastructure**: Executes entirely in your GitLab runners (Anthropic API calls go to your chosen provider)
+- 🏃 **Runs on Your Infrastructure**: Executes entirely in your GitLab runners
 - 🏢 **Enterprise Ready**: Full support for self-hosted GitLab instances with custom domains
 
 ## GitLab Quick Start
@@ -51,7 +29,7 @@ docker run -d \
   -e GITLAB_TOKEN=glpat-xxxxxxxxxxxxxxxxxxxx \
   -e WEBHOOK_SECRET=your-webhook-secret-here \
   -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  ghcr.io/realmikechong/claude-code-gitlab-app:latest
+  ghcr.io/hyperremix/claude-code-gitlab-app:latest
 ```
 
 Then configure webhooks in your GitLab project settings. See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for detailed instructions.
@@ -62,7 +40,7 @@ Add to your `.gitlab-ci.yml`:
 
 ```yaml
 include:
-  - remote: "https://raw.githubusercontent.com/RealMikeChong/claude-code-for-gitlab/main/gitlab-claude-unified.yml"
+  - remote: "https://raw.githubusercontent.com/hyperremix/claude-code-for-gitlab/main/gitlab-claude-unified.yml"
 
 variables:
   CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
@@ -92,7 +70,7 @@ For the webhook service, you'll also need:
 
 - `GITLAB_TOKEN`: Personal access token with `api` scope
 - `WEBHOOK_SECRET`: A random secret for webhook validation
-- `GITLAB_URL`: Your GitLab instance URL (defaults to https://gitlab.com)
+- `GITLAB_URL`: Your GitLab instance URL (defaults to <https://gitlab.com>)
 
 See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for complete setup instructions including:
 
@@ -101,164 +79,47 @@ See the [GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md) for complete setup 
 - Setting up for self-hosted GitLab instances
 - Docker deployment options
 
-## 📚 FAQ
+## Configuration Options
 
-Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md) for solutions to common problems and detailed explanations of Claude's capabilities and limitations.
-
-## 📖 Complete Documentation
-
-For full documentation including all configuration options, advanced features, and troubleshooting:
-
-- 🦊 **[GitLab Webhook Service Documentation](./gitlab-app/README.md)** - Complete guide for the webhook service
-- 📚 **[GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md)** - Detailed setup instructions for GitLab
-- 🔧 **[GitLab Token Troubleshooting](./docs/GITLAB_TOKEN_TROUBLESHOOTING.md)** - Common authentication issues and solutions
-- 🚀 **[GitLab Examples](./examples/gitlab/)** - Sample configurations and use cases
-
----
-
-## ⚠️ Important Notes for GitHub Users
-
-This repository contains GitLab-specific modifications that are **NOT compatible with GitHub Actions**. The original GitHub Action functionality has been adapted for GitLab CI/CD pipelines.
-
-**GitHub users should NOT use this repository**. Instead, use the official GitHub Action at [anthropics/claude-code-action](https://github.com/anthropics/claude-code-action).
-
-## Inputs
-
-| Input                          | Description                                                                                                          | Required | Default   |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `mode`                         | Execution mode for the action. Currently supports 'tag' (default). Future modes: 'review', 'freeform'                | No       | `tag`     |
-| `anthropic_api_key`            | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
-| `claude_code_oauth_token`      | Claude Code OAuth token (alternative to anthropic_api_key)                                                           | No\*     | -         |
-| `direct_prompt`                | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
-| `override_prompt`              | Complete replacement of Claude's prompt with custom template (supports variable substitution)                        | No       | -         |
-| `base_branch`                  | The base branch to use for creating new branches (e.g., 'main', 'develop')                                           | No       | -         |
-| `max_turns`                    | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
-| `timeout_minutes`              | Timeout in minutes for execution                                                                                     | No       | `30`      |
-| `use_sticky_comment`           | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                          | No       | `false`   |
-| `github_token`                 | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
-| `model`                        | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
-| `fallback_model`               | Enable automatic fallback to specified model when primary model is unavailable                                       | No       | -         |
-| `anthropic_model`              | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -         |
-| `use_bedrock`                  | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`   |
-| `use_vertex`                   | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`   |
-| `allowed_tools`                | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""        |
-| `disallowed_tools`             | Tools that Claude should never use                                                                                   | No       | ""        |
-| `custom_instructions`          | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
-| `mcp_config`                   | Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers                          | No       | ""        |
-| `assignee_trigger`             | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
-| `label_trigger`                | The label name that triggers the action when applied to an issue (e.g. "claude")                                     | No       | -         |
-| `trigger_phrase`               | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
-| `branch_prefix`                | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)                         | No       | `claude/` |
-| `claude_env`                   | Custom environment variables to pass to Claude Code execution (YAML format)                                          | No       | ""        |
-| `settings`                     | Claude Code settings as JSON string or path to settings JSON file                                                    | No       | ""        |
-| `additional_permissions`       | Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results                    | No       | ""        |
-| `experimental_allowed_domains` | Restrict network access to these domains only (newline-separated).                                                   | No       | ""        |
-| `use_commit_signing`           | Enable commit signing using GitHub's commit signature verification. When false, Claude uses standard git commands    | No       | `false`   |
+| Variable                  | Description                                                                                           | Required | Default   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- | -------- | --------- |
+| `mode`                    | Execution mode. Currently supports 'tag' (default). Future modes: 'review', 'freeform'                | No       | `tag`     |
+| `anthropic_api_key`       | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                            | No\*     | -         |
+| `claude_code_oauth_token` | Claude Code OAuth token (alternative to anthropic_api_key)                                            | No\*     | -         |
+| `direct_prompt`           | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows) | No       | -         |
+| `override_prompt`         | Complete replacement of Claude's prompt with custom template (supports variable substitution)         | No       | -         |
+| `base_branch`             | The base branch to use for creating new branches (e.g., 'main', 'develop')                            | No       | -         |
+| `max_turns`               | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                | No       | -         |
+| `timeout_minutes`         | Timeout in minutes for execution                                                                      | No       | `30`      |
+| `gitlab_token`            | GitLab token for Claude to operate with                                                               | No       | -         |
+| `model`                   | Model to use (provider-specific format required for Bedrock/Vertex)                                   | No       | -         |
+| `fallback_model`          | Enable automatic fallback to specified model when primary model is unavailable                        | No       | -         |
+| `use_bedrock`             | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                           | No       | `false`   |
+| `use_vertex`              | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                         | No       | `false`   |
+| `allowed_tools`           | Additional tools for Claude to use (the base GitLab tools will always be included)                    | No       | ""        |
+| `disallowed_tools`        | Tools that Claude should never use                                                                    | No       | ""        |
+| `custom_instructions`     | Additional custom instructions to include in the prompt for Claude                                    | No       | ""        |
+| `mcp_config`              | Additional MCP configuration (JSON string) that merges with the built-in GitLab MCP servers           | No       | ""        |
+| `assignee_trigger`        | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment         | No       | -         |
+| `label_trigger`           | The label name that triggers the action when applied to an issue (e.g. "claude")                      | No       | -         |
+| `trigger_phrase`          | The trigger phrase to look for in comments, issue/MR bodies, and issue titles                         | No       | `@claude` |
+| `branch_prefix`           | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)          | No       | `claude/` |
+| `claude_env`              | Custom environment variables to pass to Claude Code execution (YAML format)                           | No       | ""        |
+| `settings`                | Claude Code settings as JSON string or path to settings JSON file                                     | No       | ""        |
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
-
-> **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
-
-### Using Custom MCP Configuration
-
-The `mcp_config` input allows you to add custom MCP (Model Context Protocol) servers to extend Claude's capabilities. These servers merge with the built-in GitHub MCP servers.
-
-#### Basic Example: Adding a Sequential Thinking Server
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    mcp_config: |
-      {
-        "mcpServers": {
-          "sequential-thinking": {
-            "command": "npx",
-            "args": [
-              "-y",
-              "@modelcontextprotocol/server-sequential-thinking"
-            ]
-          }
-        }
-      }
-    allowed_tools: "mcp__sequential-thinking__sequentialthinking" # Important: Each MCP tool from your server must be listed here, comma-separated
-    # ... other inputs
-```
-
-#### Passing Secrets to MCP Servers
-
-For MCP servers that require sensitive information like API keys or tokens, use GitHub Secrets in the environment variables:
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    mcp_config: |
-      {
-        "mcpServers": {
-          "custom-api-server": {
-            "command": "npx",
-            "args": ["-y", "@example/api-server"],
-            "env": {
-              "API_KEY": "${{ secrets.CUSTOM_API_KEY }}",
-              "BASE_URL": "https://api.example.com"
-            }
-          }
-        }
-      }
-    # ... other inputs
-```
-
-#### Using Python MCP Servers with uv
-
-For Python-based MCP servers managed with `uv`, you need to specify the directory containing your server:
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    mcp_config: |
-      {
-        "mcpServers": {
-          "my-python-server": {
-            "type": "stdio",
-            "command": "uv",
-            "args": [
-              "--directory",
-              "${{ github.workspace }}/path/to/server/",
-              "run",
-              "server_file.py"
-            ]
-          }
-        }
-      }
-    allowed_tools: "my-python-server__<tool_name>" # Replace <tool_name> with your server's tool names
-    # ... other inputs
-```
-
-For example, if your Python MCP server is at `mcp_servers/weather.py`, you would use:
-
-```yaml
-"args":
-  ["--directory", "${{ github.workspace }}/mcp_servers/", "run", "weather.py"]
-```
-
-**Important**:
-
-- Always use GitHub Secrets (`${{ secrets.SECRET_NAME }}`) for sensitive values like API keys, tokens, or passwords. Never hardcode secrets directly in the workflow file.
-- Your custom servers will override any built-in servers with the same name.
 
 ## Examples
 
 ### Ways to Tag @claude
 
-These examples show how to interact with Claude using comments in PRs and issues. By default, Claude will be triggered anytime you mention `@claude`, but you can customize the exact trigger phrase using the `trigger_phrase` input in the workflow.
+These examples show how to interact with Claude using comments in MRs and issues. By default, Claude will be triggered anytime you mention `@claude`, but you can customize the exact trigger phrase using the `trigger_phrase` configuration.
 
-Claude will see the full PR context, including any comments.
+Claude will see the full MR context, including any comments.
 
 #### Ask Questions
 
-Add a comment to a PR or issue:
+Add a comment to an MR or issue:
 
 ```
 @claude What does this function do and how could we improve it?
@@ -279,7 +140,7 @@ Ask Claude to implement specific changes:
 Get a thorough review:
 
 ```
-@claude Please review this PR and suggest improvements
+@claude Please review this MR and suggest improvements
 ```
 
 Claude will analyze the changes and provide feedback.
@@ -296,105 +157,71 @@ Claude can see and analyze images, making it easy to fix visual bugs or UI issue
 
 ### Custom Automations
 
-These examples show how to configure Claude to act automatically based on GitHub events, without requiring manual @mentions.
-
-#### Supported GitHub Events
-
-This action supports the following GitHub events ([learn more GitHub event triggers](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)):
-
-- `pull_request` - When PRs are opened or synchronized
-- `issue_comment` - When comments are created on issues or PRs
-- `pull_request_comment` - When comments are made on PR diffs
-- `issues` - When issues are opened or assigned
-- `pull_request_review` - When PR reviews are submitted
-- `pull_request_review_comment` - When comments are made on PR reviews
-- `repository_dispatch` - Custom events triggered via API (coming soon)
-- `workflow_dispatch` - Manual workflow triggers (coming soon)
+These examples show how to configure Claude to act automatically based on GitLab events, without requiring manual @mentions.
 
 #### Automated Documentation Updates
 
-Automatically update documentation when specific files change (see [`examples/claude-pr-path-specific.yml`](./examples/claude-pr-path-specific.yml)):
+Automatically update documentation when specific files change:
 
 ```yaml
-on:
-  pull_request:
-    paths:
-      - "src/api/**/*.ts"
+variables:
+  DIRECT_PROMPT: |
+    Update the API documentation in README.md to reflect
+    the changes made to the API endpoints in this MR.
 
-steps:
-  - uses: anthropics/claude-code-action@beta
-    with:
-      direct_prompt: |
-        Update the API documentation in README.md to reflect
-        the changes made to the API endpoints in this PR.
+rules:
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    changes:
+      - "src/api/**/*.ts"
 ```
 
-When API files are modified, Claude automatically updates your README with the latest endpoint documentation and pushes the changes back to the PR, keeping your docs in sync with your code.
+When API files are modified, Claude automatically updates your README with the latest endpoint documentation and pushes the changes back to the MR.
 
 #### Author-Specific Code Reviews
 
-Automatically review PRs from specific authors or external contributors (see [`examples/claude-review-from-author.yml`](./examples/claude-review-from-author.yml)):
+Automatically review MRs from specific authors or external contributors:
 
 ```yaml
-on:
-  pull_request:
-    types: [opened, synchronize]
+variables:
+  DIRECT_PROMPT: |
+    Please provide a thorough review of this merge request.
+    Pay extra attention to coding standards, security practices,
+    and test coverage since this is from an external contributor.
 
-jobs:
-  review-by-author:
-    if: |
-      github.event.pull_request.user.login == 'developer1' ||
-      github.event.pull_request.user.login == 'external-contributor'
-    steps:
-      - uses: anthropics/claude-code-action@beta
-        with:
-          direct_prompt: |
-            Please provide a thorough review of this pull request.
-            Pay extra attention to coding standards, security practices,
-            and test coverage since this is from an external contributor.
+rules:
+  - if: "$CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID"
 ```
 
-Perfect for automatically reviewing PRs from new team members, external contributors, or specific developers who need extra guidance.
+Perfect for automatically reviewing MRs from external contributors or when you need extra guidance.
 
 #### Custom Prompt Templates
 
 Use `override_prompt` for complete control over Claude's behavior with variable substitution:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    override_prompt: |
-      Analyze PR #$PR_NUMBER in $REPOSITORY for security vulnerabilities.
+variables:
+  OVERRIDE_PROMPT: |
+    Analyze MR !$CI_MERGE_REQUEST_IID in $CI_PROJECT_PATH for security vulnerabilities.
 
-      Changed files:
-      $CHANGED_FILES
+    Changed files:
+    $CHANGED_FILES
 
-      Focus on:
-      - SQL injection risks
-      - XSS vulnerabilities
-      - Authentication bypasses
-      - Exposed secrets or credentials
+    Focus on:
+    - SQL injection risks
+    - XSS vulnerabilities
+    - Authentication bypasses
+    - Exposed secrets or credentials
 
-      Provide severity ratings (Critical/High/Medium/Low) for any issues found.
+    Provide severity ratings (Critical/High/Medium/Low) for any issues found.
 ```
-
-The `override_prompt` feature supports these variables:
-
-- `$REPOSITORY`, `$PR_NUMBER`, `$ISSUE_NUMBER`
-- `$PR_TITLE`, `$ISSUE_TITLE`, `$PR_BODY`, `$ISSUE_BODY`
-- `$PR_COMMENTS`, `$ISSUE_COMMENTS`, `$REVIEW_COMMENTS`
-- `$CHANGED_FILES`, `$TRIGGER_COMMENT`, `$TRIGGER_USERNAME`
-- `$BRANCH_NAME`, `$BASE_BRANCH`, `$EVENT_TYPE`, `$IS_PR`
 
 ## How It Works
 
 1. **Trigger Detection**: Listens for comments containing the trigger phrase (default: `@claude`) or issue assignment to a specific user
-2. **Context Gathering**: Analyzes the PR/issue, comments, code changes
+2. **Context Gathering**: Analyzes the MR/issue, comments, code changes
 3. **Smart Responses**: Either answers questions or implements changes
-4. **Branch Management**: Creates new PRs for human authors, pushes directly for Claude's own PRs
+4. **Branch Management**: Creates new MRs for human authors, pushes directly for Claude's own MRs
 5. **Communication**: Posts updates at every step to keep you informed
-
-This action is built on top of [`anthropics/claude-code-base-action`](https://github.com/anthropics/claude-code-base-action).
 
 ## Capabilities and Limitations
 
@@ -403,127 +230,48 @@ This action is built on top of [`anthropics/claude-code-base-action`](https://gi
 - **Respond in a Single Comment**: Claude operates by updating a single initial comment with progress and results
 - **Answer Questions**: Analyze code and provide explanations
 - **Implement Code Changes**: Make simple to moderate code changes based on requests
-- **Prepare Pull Requests**: Creates commits on a branch and links back to a prefilled PR creation page
-- **Perform Code Reviews**: Analyze PR changes and provide detailed feedback
+- **Prepare Merge Requests**: Creates commits on a branch and links back to a prefilled MR creation page
+- **Perform Code Reviews**: Analyze MR changes and provide detailed feedback
 - **Smart Branch Handling**:
   - When triggered on an **issue**: Always creates a new branch for the work
-  - When triggered on an **open PR**: Always pushes directly to the existing PR branch
-  - When triggered on a **closed PR**: Creates a new branch since the original is no longer active
-- **View GitHub Actions Results**: Can access workflow runs, job logs, and test results on the PR where it's tagged when `actions: read` permission is configured (see [Additional Permissions for CI/CD Integration](#additional-permissions-for-cicd-integration))
+  - When triggered on an **open MR**: Always pushes directly to the existing MR branch
+  - When triggered on a **closed MR**: Creates a new branch since the original is no longer active
 
 ### What Claude Cannot Do
 
-- **Submit PR Reviews**: Claude cannot submit formal GitHub PR reviews
-- **Approve PRs**: For security reasons, Claude cannot approve pull requests
+- **Submit MR Reviews**: Claude cannot submit formal GitLab MR reviews
+- **Approve MRs**: For security reasons, Claude cannot approve merge requests
 - **Post Multiple Comments**: Claude only acts by updating its initial comment
-- **Execute Commands Outside Its Context**: Claude only has access to the repository and PR/issue context it's triggered in
+- **Execute Commands Outside Its Context**: Claude only has access to the repository and MR/issue context it's triggered in
 - **Run Arbitrary Bash Commands**: By default, Claude cannot execute Bash commands unless explicitly allowed using the `allowed_tools` configuration
 - **Perform Branch Operations**: Cannot merge branches, rebase, or perform other git operations beyond pushing commits
 
 ## Advanced Configuration
 
-### Additional Permissions for CI/CD Integration
-
-The `additional_permissions` input allows Claude to access GitHub Actions workflow information when you grant the necessary permissions. This is particularly useful for analyzing CI/CD failures and debugging workflow issues.
-
-#### Enabling GitHub Actions Access
-
-To allow Claude to view workflow run results, job logs, and CI status:
-
-1. **Grant the necessary permission to your GitHub token**:
-
-   - When using the default `GITHUB_TOKEN`, add the `actions: read` permission to your workflow:
-
-   ```yaml
-   permissions:
-     contents: write
-     pull-requests: write
-     issues: write
-     actions: read # Add this line
-   ```
-
-2. **Configure the action with additional permissions**:
-
-   ```yaml
-   - uses: anthropics/claude-code-action@beta
-     with:
-       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-       additional_permissions: |
-         actions: read
-       # ... other inputs
-   ```
-
-3. **Claude will automatically get access to CI/CD tools**:
-   When you enable `actions: read`, Claude can use the following MCP tools:
-   - `mcp__github_ci__get_ci_status` - View workflow run statuses
-   - `mcp__github_ci__get_workflow_run_details` - Get detailed workflow information
-   - `mcp__github_ci__download_job_log` - Download and analyze job logs
-
-#### Example: Debugging Failed CI Runs
-
-```yaml
-name: Claude CI Helper
-on:
-  issue_comment:
-    types: [created]
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  actions: read # Required for CI access
-
-jobs:
-  claude-ci-helper:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          additional_permissions: |
-            actions: read
-          # Now Claude can respond to "@claude why did the CI fail?"
-```
-
-**Important Notes**:
-
-- The GitHub token must have the `actions: read` permission in your workflow
-- If the permission is missing, Claude will warn you and suggest adding it
-- Currently, only `actions: read` is supported, but the format allows for future extensions
-
 ### Custom Environment Variables
 
-You can pass custom environment variables to Claude Code execution using the `claude_env` input. This is useful for CI/test setups that require specific environment variables:
+You can pass custom environment variables to Claude Code execution using the `claude_env` configuration:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    claude_env: |
-      NODE_ENV: test
-      CI: true
-      DATABASE_URL: postgres://test:test@localhost:5432/test_db
-    # ... other inputs
+variables:
+  CLAUDE_ENV: |
+    NODE_ENV: test
+    CI: true
+    DATABASE_URL: postgres://test:test@localhost:5432/test_db
 ```
 
-The `claude_env` input accepts YAML format where each line defines a key-value pair. These environment variables will be available to Claude Code during execution, allowing it to run tests, build processes, or other commands that depend on specific environment configurations.
+The `claude_env` input accepts YAML format where each line defines a key-value pair. These environment variables will be available to Claude Code during execution.
 
 ### Limiting Conversation Turns
 
-You can use the `max_turns` parameter to limit the number of back-and-forth exchanges Claude can have during task execution. This is useful for:
-
-- Controlling costs by preventing runaway conversations
-- Setting time boundaries for automated workflows
-- Ensuring predictable behavior in CI/CD pipelines
+You can use the `max_turns` parameter to limit the number of back-and-forth exchanges Claude can have during task execution:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    max_turns: "5" # Limit to 5 conversation turns
-    # ... other inputs
+variables:
+  MAX_TURNS: "5" # Limit to 5 conversation turns
 ```
 
-When the turn limit is reached, Claude will stop execution gracefully. Choose a value that gives Claude enough turns to complete typical tasks while preventing excessive usage.
+When the turn limit is reached, Claude will stop execution gracefully.
 
 ### Custom Tools
 
@@ -531,163 +279,62 @@ By default, Claude only has access to:
 
 - File operations (reading, committing, editing files, read-only git commands)
 - Comment management (creating/updating comments)
-- Basic GitHub operations
+- Basic GitLab operations
 
 Claude does **not** have access to execute arbitrary Bash commands by default. If you want Claude to run specific commands (e.g., npm install, npm test), you must explicitly allow them using the `allowed_tools` configuration:
 
-**Note**: If your repository has a `.mcp.json` file in the root directory, Claude will automatically detect and use the MCP server tools defined there. However, these tools still need to be explicitly allowed via the `allowed_tools` configuration.
-
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    allowed_tools: |
-      Bash(npm install)
-      Bash(npm run test)
-      Edit
-      Replace
-      NotebookEditCell
-    disallowed_tools: |
-      TaskOutput
-      KillTask
-    # ... other inputs
+variables:
+  ALLOWED_TOOLS: |
+    Bash(npm install)
+    Bash(npm run test)
+    Edit
+    Replace
+  DISALLOWED_TOOLS: |
+    TaskOutput
+    KillTask
 ```
-
-**Note**: The base GitHub tools are always included. Use `allowed_tools` to add additional tools (including specific Bash commands), and `disallowed_tools` to prevent specific tools from being used.
 
 ### Custom Model
 
 Use a specific Claude model:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    # model: "claude-3-5-sonnet-20241022"  # Optional: specify a different model
-    # ... other inputs
+variables:
+  MODEL: "claude-3-5-sonnet-20241022"
 ```
 
 ### Network Restrictions
 
-For enhanced security, you can restrict Claude's network access to specific domains only. This feature is particularly useful for:
-
-- Enterprise environments with strict security policies
-- Preventing access to external services
-- Limiting Claude to only your internal APIs and services
-
-When `experimental_allowed_domains` is set, Claude can only access the domains you explicitly list. You'll need to include the appropriate provider domains based on your authentication method.
-
-#### Provider-Specific Examples
-
-##### If using Anthropic API or subscription
+For enhanced security, you can restrict Claude's network access to specific domains only:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    # Or: claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-    experimental_allowed_domains: |
-      .anthropic.com
+variables:
+  EXPERIMENTAL_ALLOWED_DOMAINS: |
+    .anthropic.com
+    .gitlab.com
+    .gitlab.company.com
 ```
-
-##### If using AWS Bedrock
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    use_bedrock: "true"
-    experimental_allowed_domains: |
-      bedrock.*.amazonaws.com
-      bedrock-runtime.*.amazonaws.com
-```
-
-##### If using Google Vertex AI
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    use_vertex: "true"
-    experimental_allowed_domains: |
-      *.googleapis.com
-      vertexai.googleapis.com
-```
-
-#### Common GitHub Domains
-
-In addition to your provider domains, you may need to include GitHub-related domains. For GitHub.com users, common domains include:
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    experimental_allowed_domains: |
-      .anthropic.com  # For Anthropic API
-      .github.com
-      .githubusercontent.com
-      ghcr.io
-      .blob.core.windows.net
-```
-
-For GitHub Enterprise users, replace the GitHub.com domains above with your enterprise domains (e.g., `.github.company.com`, `packages.company.com`, etc.).
-
-To determine which domains your workflow needs, you can temporarily run without restrictions and monitor the network requests, or check your GitHub Enterprise configuration for the specific services you use.
 
 ### Claude Code Settings
 
-You can provide Claude Code settings to customize behavior such as model selection, environment variables, permissions, and hooks. Settings can be provided either as a JSON string or a path to a settings file.
-
-#### Option 1: Settings File
+You can provide Claude Code settings to customize behavior such as model selection, environment variables, permissions, and hooks:
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    settings: "path/to/settings.json"
-    # ... other inputs
-```
-
-#### Option 2: Inline Settings
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    settings: |
-      {
-        "model": "claude-opus-4-20250514",
-        "env": {
-          "DEBUG": "true",
-          "API_URL": "https://api.example.com"
-        },
-        "permissions": {
-          "allow": ["Bash", "Read"],
-          "deny": ["WebFetch"]
-        },
-        "hooks": {
-          "PreToolUse": [{
-            "matcher": "Bash",
-            "hooks": [{
-              "type": "command",
-              "command": "echo Running bash command..."
-            }]
-          }]
-        }
+variables:
+  SETTINGS: |
+    {
+      "model": "claude-opus-4-20250514",
+      "env": {
+        "DEBUG": "true",
+        "API_URL": "https://api.example.com"
+      },
+      "permissions": {
+        "allow": ["Bash", "Read"],
+        "deny": ["WebFetch"]
       }
-    # ... other inputs
+    }
 ```
-
-The settings support all Claude Code settings options including:
-
-- `model`: Override the default model
-- `env`: Environment variables for the session
-- `permissions`: Tool usage permissions
-- `hooks`: Pre/post tool execution hooks
-- And more...
-
-For a complete list of available settings and their descriptions, see the [Claude Code settings documentation](https://docs.anthropic.com/en/docs/claude-code/settings).
-
-**Notes**:
-
-- The `enableAllProjectMcpServers` setting is always set to `true` by this action to ensure MCP servers work correctly.
-- If both the `model` input parameter and a `model` in settings are provided, the `model` input parameter takes precedence.
-- The `allowed_tools` and `disallowed_tools` input parameters take precedence over `permissions` in settings.
-- In a future version, we may deprecate individual input parameters in favor of using the settings file for all configuration.
 
 ## Cloud Providers
 
@@ -697,187 +344,86 @@ You can authenticate with Claude using any of these three methods:
 2. Amazon Bedrock with OIDC authentication
 3. Google Vertex AI with OIDC authentication
 
-For detailed setup instructions for AWS Bedrock and Google Vertex AI, see the [official documentation](https://docs.anthropic.com/en/docs/claude-code/github-actions#using-with-aws-bedrock-%26-google-vertex-ai).
-
-**Note**:
-
-- Bedrock and Vertex use OIDC authentication exclusively
-- AWS Bedrock automatically uses cross-region inference profiles for certain models
-- For cross-region inference profile models, you need to request and be granted access to the Claude models in all regions that the inference profile uses
-
 ### Model Configuration
 
 Use provider-specific model names based on your chosen provider:
 
 ```yaml
 # For direct Anthropic API (default)
-- uses: anthropics/claude-code-action@beta
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    # ... other inputs
+variables:
+  ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
 
-# For Amazon Bedrock with OIDC
-- uses: anthropics/claude-code-action@beta
-  with:
-    model: "anthropic.claude-3-7-sonnet-20250219-beta:0" # Cross-region inference
-    use_bedrock: "true"
-    # ... other inputs
+# For Amazon Bedrock
+variables:
+  MODEL: "anthropic.claude-3-7-sonnet-20250219-beta:0"
+  USE_BEDROCK: "true"
 
-# For Google Vertex AI with OIDC
-- uses: anthropics/claude-code-action@beta
-  with:
-    model: "claude-3-7-sonnet@20250219"
-    use_vertex: "true"
-    # ... other inputs
-```
-
-### OIDC Authentication for Bedrock and Vertex
-
-Both AWS Bedrock and GCP Vertex AI require OIDC authentication.
-
-```yaml
-# For AWS Bedrock with OIDC
-- name: Configure AWS Credentials (OIDC)
-  uses: aws-actions/configure-aws-credentials@v4
-  with:
-    role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-    aws-region: us-west-2
-
-- name: Generate GitHub App token
-  id: app-token
-  uses: actions/create-github-app-token@v2
-  with:
-    app-id: ${{ secrets.APP_ID }}
-    private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-- uses: anthropics/claude-code-action@beta
-  with:
-    model: "anthropic.claude-3-7-sonnet-20250219-beta:0"
-    use_bedrock: "true"
-    # ... other inputs
-
-  permissions:
-    id-token: write # Required for OIDC
-```
-
-```yaml
-# For GCP Vertex AI with OIDC
-- name: Authenticate to Google Cloud
-  uses: google-github-actions/auth@v2
-  with:
-    workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-    service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-- name: Generate GitHub App token
-  id: app-token
-  uses: actions/create-github-app-token@v2
-  with:
-    app-id: ${{ secrets.APP_ID }}
-    private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-- uses: anthropics/claude-code-action@beta
-  with:
-    model: "claude-3-7-sonnet@20250219"
-    use_vertex: "true"
-    # ... other inputs
-
-  permissions:
-    id-token: write # Required for OIDC
+# For Google Vertex AI
+variables:
+  MODEL: "claude-3-7-sonnet@20250219"
+  USE_VERTEX: "true"
 ```
 
 ## Security
 
 ### Access Control
 
-- **Repository Access**: The action can only be triggered by users with write access to the repository
-- **No Bot Triggers**: GitHub Apps and bots cannot trigger this action
-- **Token Permissions**: The GitHub app receives only a short-lived token scoped specifically to the repository it's operating in
+- **Repository Access**: The action can only be triggered by users with developer access or higher to the GitLab project
+- **Token Permissions**: The GitLab token receives only the necessary permissions scoped specifically to the project it's operating in
 - **No Cross-Repository Access**: Each action invocation is limited to the repository where it was triggered
 - **Limited Scope**: The token cannot access other repositories or perform actions beyond the configured permissions
 
-### GitHub App Permissions
-
-The [Claude Code GitHub app](https://github.com/apps/claude) requires these permissions:
-
-- **Pull Requests**: Read and write to create PRs and push changes
-- **Issues**: Read and write to respond to issues
-- **Contents**: Read and write to modify repository files
-
-### Commit Signing
-
-All commits made by Claude through this action are automatically signed with commit signatures. This ensures the authenticity and integrity of commits, providing a verifiable trail of changes made by the action.
-
 ### ⚠️ Authentication Protection
 
-**CRITICAL: Never hardcode your Anthropic API key or OAuth token in workflow files!**
+**CRITICAL: Never hardcode your Anthropic API key or OAuth token in GitLab CI files!**
 
-Your authentication credentials must always be stored in GitHub secrets to prevent unauthorized access:
+Your authentication credentials must always be stored in GitLab CI/CD variables to prevent unauthorized access:
 
 ```yaml
 # CORRECT ✅
-anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-# OR
-claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+variables:
+  ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+  # OR
+  CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
 
 # NEVER DO THIS ❌
-anthropic_api_key: "sk-ant-api03-..." # Exposed and vulnerable!
-claude_code_oauth_token: "oauth_token_..." # Exposed and vulnerable!
+variables:
+  ANTHROPIC_API_KEY: "sk-ant-api03-..." # Exposed and vulnerable!
 ```
 
-### Setting Up GitHub Secrets
+### Setting Up GitLab CI/CD Variables
 
-1. Go to your repository's Settings
-2. Click on "Secrets and variables" → "Actions"
-3. Click "New repository secret"
-4. For authentication, choose one:
-   - API Key: Name: `ANTHROPIC_API_KEY`, Value: Your Anthropic API key (starting with `sk-ant-`)
-   - OAuth Token: Name: `CLAUDE_CODE_OAUTH_TOKEN`, Value: Your Claude Code OAuth token (Pro and Max users can generate this by running `claude setup-token` locally)
-5. Click "Add secret"
+1. Go to your GitLab project's Settings
+2. Click on "CI/CD"
+3. Expand "Variables"
+4. Click "Add variable"
+5. For authentication, choose one:
+   - API Key: Key: `ANTHROPIC_API_KEY`, Value: Your Anthropic API key (starting with `sk-ant-`)
+   - OAuth Token: Key: `CLAUDE_CODE_OAUTH_TOKEN`, Value: Your Claude Code OAuth token
+6. Make sure to mark the variable as "Protected" and "Masked" for security
+7. Click "Add variable"
 
 ### Best Practices for Authentication
 
-1. ✅ Always use `${{ secrets.ANTHROPIC_API_KEY }}` or `${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}` in workflows
+1. ✅ Always use `$ANTHROPIC_API_KEY` or `$CLAUDE_CODE_OAUTH_TOKEN` in CI files
 2. ✅ Never commit API keys or tokens to version control
 3. ✅ Regularly rotate your API keys and tokens
-4. ✅ Use environment secrets for organization-wide access
-5. ❌ Never share API keys or tokens in pull requests or issues
-6. ❌ Avoid logging workflow variables that might contain keys
+4. ✅ Use group-level variables for organization-wide access
+5. ❌ Never share API keys or tokens in merge requests or issues
+6. ❌ Avoid logging variables that might contain keys
 
-## Security Best Practices
+## 📚 FAQ
 
-**⚠️ IMPORTANT: Never commit API keys directly to your repository! Always use GitHub Actions secrets.**
+Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md) for solutions to common problems and detailed explanations of Claude's capabilities and limitations.
 
-To securely use your Anthropic API key:
+## 📖 Complete Documentation
 
-1. Add your API key as a repository secret:
+For full documentation including all configuration options, advanced features, and troubleshooting:
 
-   - Go to your repository's Settings
-   - Navigate to "Secrets and variables" → "Actions"
-   - Click "New repository secret"
-   - Name it `ANTHROPIC_API_KEY`
-   - Paste your API key as the value
-
-2. Reference the secret in your workflow:
-   ```yaml
-   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-   ```
-
-**Never do this:**
-
-```yaml
-# ❌ WRONG - Exposes your API key
-anthropic_api_key: "sk-ant-..."
-```
-
-**Always do this:**
-
-```yaml
-# ✅ CORRECT - Uses GitHub secrets
-anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-This applies to all sensitive values including API keys, access tokens, and credentials.
-We also recommend that you always use short-lived tokens when possible
+- 🦊 **[GitLab Webhook Service Documentation](./gitlab-app/README.md)** - Complete guide for the webhook service
+- 📚 **[GitLab App Setup Guide](./docs/GITLAB_APP_SETUP.md)** - Detailed setup instructions for GitLab
+- 🔧 **[GitLab Token Troubleshooting](./docs/GITLAB_TOKEN_TROUBLESHOOTING.md)** - Common authentication issues and solutions
+- 🚀 **[GitLab Examples](./examples/gitlab/)** - Sample configurations and use cases
 
 ## License
 

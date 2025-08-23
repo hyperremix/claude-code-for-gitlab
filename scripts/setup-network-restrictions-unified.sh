@@ -2,12 +2,21 @@
 
 # Setup Network Restrictions with Squid Proxy
 # This script sets up a Squid proxy to restrict network access to whitelisted domains only.
-# Works with both GitHub Actions and GitLab CI
+# Designed for GitLab CI environments
 
 set -e
 
-# Source the temp directory utility
-source "$(dirname "$0")/get-temp-directory.sh"
+# Get the appropriate temporary directory for GitLab CI
+if [ -n "$CI_BUILDS_DIR" ]; then
+  # GitLab CI - create a subdirectory for Claude temp files
+  TEMP_DIR="$CI_BUILDS_DIR/.claude-temp"
+  TEMP_SOURCE="CI_BUILDS_DIR"
+  mkdir -p "$TEMP_DIR"
+else
+  # Fallback to system temp
+  TEMP_DIR="/tmp"
+  TEMP_SOURCE="fallback"
+fi
 
 # Check if experimental_allowed_domains is provided
 if [ -z "$EXPERIMENTAL_ALLOWED_DOMAINS" ]; then
@@ -21,14 +30,11 @@ if [ -z "$TEMP_DIR" ]; then
   exit 1
 fi
 
-# For GitHub Actions, we need GITHUB_ENV
 # For GitLab CI, we'll write to a file that can be sourced
-if [ -n "$GITHUB_ENV" ]; then
-  ENV_FILE="$GITHUB_ENV"
-elif [ -n "$GITLAB_CI" ]; then
+if [ -n "$GITLAB_CI" ]; then
   ENV_FILE="$TEMP_DIR/proxy-env.sh"
 else
-  echo "WARNING: Neither GITHUB_ENV nor GITLAB_CI detected, proxy env vars will not persist"
+  echo "WARNING: GITLAB_CI not detected, proxy env vars will not persist"
   ENV_FILE="/dev/null"
 fi
 
@@ -129,23 +135,15 @@ fi
 
 # Set proxy environment variables
 if [ "$ENV_FILE" != "/dev/null" ]; then
-  if [ -n "$GITLAB_CI" ]; then
-    # For GitLab CI, create a script that can be sourced
-    cat > "$ENV_FILE" << 'EOF'
+  # For GitLab CI, create a script that can be sourced
+  cat > "$ENV_FILE" << 'EOF'
 export http_proxy=http://127.0.0.1:3128
 export https_proxy=http://127.0.0.1:3128
 export HTTP_PROXY=http://127.0.0.1:3128
 export HTTPS_PROXY=http://127.0.0.1:3128
 EOF
-    echo "Proxy environment variables saved to: $ENV_FILE"
-    echo "Source this file to apply proxy settings: source $ENV_FILE"
-  else
-    # For GitHub Actions, append to GITHUB_ENV
-    echo "http_proxy=http://127.0.0.1:3128" >> $ENV_FILE
-    echo "https_proxy=http://127.0.0.1:3128" >> $ENV_FILE
-    echo "HTTP_PROXY=http://127.0.0.1:3128" >> $ENV_FILE
-    echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $ENV_FILE
-  fi
+  echo "Proxy environment variables saved to: $ENV_FILE"
+  echo "Source this file to apply proxy settings: source $ENV_FILE"
 fi
 
 echo "Network restrictions setup completed successfully"

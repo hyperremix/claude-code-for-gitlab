@@ -1,4 +1,4 @@
-# GitLab CI/CD Examples for Claude Code Action
+# GitLab CI/CD Examples
 
 This directory contains example GitLab CI/CD configurations for integrating Claude Code into your GitLab workflows.
 
@@ -20,7 +20,7 @@ claude_assistant:
   before_script:
     # Clone Claude Code for GitLab
     - apk add --no-cache git openssh-client
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-code
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-code
     - cd /tmp/claude-code
     - bun install --frozen-lockfile
     - cd $CI_PROJECT_DIR
@@ -40,7 +40,7 @@ For faster pipeline execution, build a Docker image from the Claude Code reposit
 claude_assistant:
   image: your-registry/claude-code-gitlab:latest
   script:
-    - claude-code-action
+    - claude-code-for-gitlab
   variables:
     CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
 ```
@@ -53,7 +53,7 @@ For the absolute simplest integration, you can include a remote configuration:
 
 ```yaml
 include:
-  - remote: "https://raw.githubusercontent.com/RealMikeChong/claude-code-for-gitlab/main/examples/gitlab/include/claude-code.gitlab-ci.yml"
+  - remote: "https://raw.githubusercontent.com/hyperremix/claude-code-for-gitlab/main/examples/gitlab/include/claude-code.gitlab-ci.yml"
 
 variables:
   CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
@@ -242,7 +242,7 @@ variables:
 
 ## 📚 Additional Resources
 
-- [Claude Code Action Documentation](../../README.md)
+- [Claude Code for GitLab Documentation](../README.md)
 - [GitLab CI/CD Documentation](https://docs.gitlab.com/ee/ci/)
 - [GitLab Webhooks Guide](https://docs.gitlab.com/ee/user/project/integrations/webhooks.html)
 - [GitLab API Reference](https://docs.gitlab.com/ee/api/)

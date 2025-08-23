@@ -1,5 +1,5 @@
 /**
- * Mode Registry for claude-code-action
+ * Mode Registry for claude-code-for-gitlab
  *
  * This module provides access to all available execution modes.
  *
@@ -7,11 +7,10 @@
  * 1. Add the mode name to VALID_MODES below
  * 2. Create the mode implementation in a new directory (e.g., src/modes/review/)
  * 3. Import and add it to the modes object below
- * 4. Update action.yml description to mention the new mode
  */
 
-import type { Mode } from "./types";
 import { tagMode } from "./tag/index";
+import type { Mode } from "./types";
 
 export const DEFAULT_MODE = "tag" as const;
 export const VALID_MODES = ["tag"] as const;

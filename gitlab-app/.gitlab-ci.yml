@@ -27,7 +27,7 @@ claude_webhook_handler:
     - apk add --no-cache git openssh-client curl jq
 
     # Clone this repository to get the runner script
-    - git clone https://github.com/RealMikeChong/claude-code-for-gitlab.git /tmp/claude-gitlab
+    - git clone https://github.com/hyperremix/claude-code-for-gitlab.git /tmp/claude-gitlab
 
     # Configure git for the working repository
     - git config --global user.name "Claude Bot"

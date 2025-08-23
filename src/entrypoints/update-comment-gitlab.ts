@@ -1,9 +1,8 @@
 #!/usr/bin/env bun
 
-import * as core from "@actions/core";
-import * as fs from "fs/promises";
-import { Gitlab } from "@gitbeaker/rest";
 import type { SDKMessage } from "@anthropic-ai/claude-code";
+import { Gitlab } from "@gitbeaker/rest";
+import * as fs from "fs/promises";
 import type { GitLabNote } from "../types/gitbeaker";
 
 /**
@@ -31,7 +30,7 @@ async function getExecutionDetails(outputFile?: string): Promise<{
       };
     }
   } catch (error) {
-    core.warning(`Error reading or parsing output file: ${error}`);
+    console.warn(`Error reading or parsing output file: ${error}`);
   }
   return null;
 }
@@ -176,7 +175,7 @@ async function run() {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    core.setFailed(`Failed to update GitLab comment: ${errorMessage}`);
+    console.error(`Failed to update GitLab comment: ${errorMessage}`);
     process.exit(1);
   }
 }

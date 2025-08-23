@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { getToken } from "../../src/providers/provider-factory";
 
 describe("OAuth Token Support", () => {
@@ -9,10 +9,8 @@ describe("OAuth Token Support", () => {
     // Clear all token-related environment variables
     delete process.env.CLAUDE_CODE_GL_ACCESS_TOKEN;
     delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
-    delete process.env.GITHUB_TOKEN;
     delete process.env.GITLAB_TOKEN;
     delete process.env.INPUT_CLAUDE_CODE_OAUTH_TOKEN;
-    delete process.env.INPUT_GITHUB_TOKEN;
     delete process.env.INPUT_GITLAB_TOKEN;
   });
 
@@ -20,54 +18,7 @@ describe("OAuth Token Support", () => {
     process.env = originalEnv;
   });
 
-  describe("GitHub Platform", () => {
-    beforeEach(() => {
-      process.env.GITHUB_ACTIONS = "true";
-    });
-
-    test("prefers OAuth token over traditional GitHub token", () => {
-      process.env.CLAUDE_CODE_OAUTH_TOKEN = "oauth-token-123";
-      process.env.GITHUB_TOKEN = "github-token-456";
-
-      const token = getToken();
-      expect(token).toBe("oauth-token-123");
-    });
-
-    test("uses OAuth token from input variable", () => {
-      process.env.INPUT_CLAUDE_CODE_OAUTH_TOKEN = "input-oauth-token";
-      process.env.GITHUB_TOKEN = "github-token";
-
-      const token = getToken();
-      expect(token).toBe("input-oauth-token");
-    });
-
-    test("falls back to github_token input when OAuth token not available", () => {
-      process.env.INPUT_GITHUB_TOKEN = "input-github-token";
-      process.env.GITHUB_TOKEN = "env-github-token";
-
-      const token = getToken();
-      expect(token).toBe("input-github-token");
-    });
-
-    test("falls back to GITHUB_TOKEN env var when no inputs available", () => {
-      process.env.GITHUB_TOKEN = "env-github-token";
-
-      const token = getToken();
-      expect(token).toBe("env-github-token");
-    });
-
-    test("throws error when no tokens available", () => {
-      // All tokens already cleared in beforeEach
-      expect(() => getToken()).toThrow("GitHub authentication required");
-    });
-  });
-
   describe("GitLab Platform", () => {
-    beforeEach(() => {
-      process.env.GITLAB_CI = "true";
-      process.env.CI_PROJECT_ID = "123";
-    });
-
     test("prefers GL access token over all other tokens", () => {
       process.env.CLAUDE_CODE_GL_ACCESS_TOKEN = "gl-access-token-123";
       process.env.CLAUDE_CODE_OAUTH_TOKEN = "oauth-token-456";
@@ -117,27 +68,7 @@ describe("OAuth Token Support", () => {
   });
 
   describe("OAuth Token Logging", () => {
-    test("logs when using OAuth token for GitHub", () => {
-      process.env.GITHUB_ACTIONS = "true";
-      process.env.CLAUDE_CODE_OAUTH_TOKEN = "oauth-token-123";
-
-      const originalLog = console.log;
-      let logMessage = "";
-      console.log = (msg: string) => {
-        logMessage = msg;
-      };
-
-      getToken();
-
-      expect(logMessage).toBe(
-        "Using Claude Code OAuth token for GitHub authentication",
-      );
-      console.log = originalLog;
-    });
-
     test("logs when using GL access token for GitLab", () => {
-      process.env.GITLAB_CI = "true";
-      process.env.CI_PROJECT_ID = "123";
       process.env.CLAUDE_CODE_GL_ACCESS_TOKEN = "gl-access-token-123";
 
       const originalLog = console.log;
@@ -155,8 +86,6 @@ describe("OAuth Token Support", () => {
     });
 
     test("logs when using OAuth token for GitLab", () => {
-      process.env.GITLAB_CI = "true";
-      process.env.CI_PROJECT_ID = "123";
       process.env.CLAUDE_CODE_OAUTH_TOKEN = "oauth-token-123";
 
       const originalLog = console.log;

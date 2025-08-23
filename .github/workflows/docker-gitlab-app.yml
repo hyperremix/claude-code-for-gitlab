@@ -21,7 +21,7 @@ on:
 
 env:
   # GitHub Container Registry
-  GHCR_REPOSITORY: ghcr.io/realmikechong/claude-code-gitlab-app
+  GHCR_REPOSITORY: ghcr.io/hyperremix/claude-code-gitlab-app
 
 jobs:
   build-and-push:

@@ -37,7 +37,7 @@ Copy the `.gitlab-ci.yml` file from this repository to your project root, or inc
 
 ```yaml
 include:
-  - remote: "https://raw.githubusercontent.com/RealMikeChong/claude-code-for-gitlab/main/gitlab-app/.gitlab-ci.yml"
+  - remote: "https://raw.githubusercontent.com/hyperremix/claude-code-for-gitlab/main/gitlab-app/.gitlab-ci.yml"
 ```
 
 ### 3. Configure Webhook in GitLab
