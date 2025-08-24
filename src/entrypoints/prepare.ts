@@ -29,7 +29,10 @@ async function run() {
         );
       } else {
         console.log(
-          `${varName}: Set (length: ${value.length}, prefix: "${value.substring(0, 8)}...")`,
+          `${varName}: Set (length: ${value.length}, prefix: "${value.substring(
+            0,
+            8,
+          )}...")`,
         );
       }
     } else {
@@ -77,7 +80,9 @@ async function runGitLab() {
     } catch (error) {
       console.error("Error checking write permissions:", error);
       throw new Error(
-        `Failed to check write permissions: ${error instanceof Error ? error.message : error}`,
+        `Failed to check write permissions: ${
+          error instanceof Error ? error.message : error
+        }`,
       );
     }
 
@@ -99,7 +104,9 @@ async function runGitLab() {
     } catch (error) {
       console.error("Error checking trigger:", error);
       throw new Error(
-        `Failed to check trigger: ${error instanceof Error ? error.message : error}`,
+        `Failed to check trigger: ${
+          error instanceof Error ? error.message : error
+        }`,
       );
     }
 
@@ -118,7 +125,9 @@ async function runGitLab() {
       } catch (error) {
         console.error("Error checking human actor:", error);
         throw new Error(
-          `Failed to check human actor: ${error instanceof Error ? error.message : error}`,
+          `Failed to check human actor: ${
+            error instanceof Error ? error.message : error
+          }`,
         );
       }
       if (!isHuman) {
@@ -150,13 +159,15 @@ async function runGitLab() {
     } catch (error) {
       console.error("Error creating comment:", error);
       throw new Error(
-        `Failed to create comment: ${error instanceof Error ? error.message : error}`,
+        `Failed to create comment: ${
+          error instanceof Error ? error.message : error
+        }`,
       );
     }
 
     // Output comment ID for later use
     if (process.env.GITHUB_OUTPUT) {
-      const fs = await import("fs");
+      const fs = await import("node:fs");
       fs.appendFileSync(
         process.env.GITHUB_OUTPUT,
         `claude_comment_id=${commentId}\n`,
@@ -167,7 +178,7 @@ async function runGitLab() {
     process.env.CLAUDE_COMMENT_ID = commentId.toString();
 
     // For GitLab, write to a file that can be read by the parent process
-    const fileSystem = await import("fs");
+    const fileSystem = await import("node:fs");
     fileSystem.writeFileSync(
       "/tmp/claude-comment-id.txt",
       commentId.toString(),
@@ -184,7 +195,9 @@ async function runGitLab() {
     } catch (error) {
       console.error("Error configuring git auth:", error);
       throw new Error(
-        `Failed to configure git auth: ${error instanceof Error ? error.message : error}`,
+        `Failed to configure git auth: ${
+          error instanceof Error ? error.message : error
+        }`,
       );
     }
 
@@ -203,7 +216,9 @@ async function runGitLab() {
     } catch (error) {
       console.error("Error fetching context data:", error);
       throw new Error(
-        `Failed to fetch context data: ${error instanceof Error ? error.message : error}`,
+        `Failed to fetch context data: ${
+          error instanceof Error ? error.message : error
+        }`,
       );
     }
 
@@ -244,7 +259,9 @@ async function runGitLab() {
 
 **Title:** ${contextData.title}
 **Description:** ${contextData.description || "No description provided"}
-**Source Branch:** ${contextData.sourceBranch} → **Target Branch:** ${contextData.targetBranch}
+**Source Branch:** ${contextData.sourceBranch} → **Target Branch:** ${
+        contextData.targetBranch
+      }
 **State:** ${contextData.state}
 **Author:** ${contextData.author.name} (@${contextData.author.username})
 **Web URL:** ${contextData.webUrl}
@@ -255,7 +272,15 @@ ${
   contextData.changes
     ?.map(
       (change: any) => `
-### ${change.new_file ? "📄 New File" : change.deleted_file ? "🗑️ Deleted File" : change.renamed_file ? "📝 Renamed File" : "✏️ Modified File"}: \`${change.new_path}\`
+### ${
+        change.new_file
+          ? "📄 New File"
+          : change.deleted_file
+            ? "🗑️ Deleted File"
+            : change.renamed_file
+              ? "📝 Renamed File"
+              : "✏️ Modified File"
+      }: \`${change.new_path}\`
 
 \`\`\`diff
 ${change.diff}
@@ -288,7 +313,10 @@ ${note.body}
 
 ${triggerComment ? `The user mentioned you with: "${triggerComment}"` : ""}
 
-${directPrompt || "Please analyze this merge request and provide feedback on code quality, potential issues, and suggestions for improvement."}
+${
+  directPrompt ||
+  "Please analyze this merge request and provide feedback on code quality, potential issues, and suggestions for improvement."
+}
 
 When providing feedback, be specific and reference exact line numbers and file paths.`;
     } else if (contextData.iid && contextData.state) {
@@ -348,7 +376,7 @@ ${directPrompt || "Please help with the requested task."}`;
     }
 
     // Write prompt file
-    const fs = await import("fs");
+    const fs = await import("node:fs");
     await fs.promises.writeFile(`${promptDir}/claude-prompt.txt`, prompt);
     console.log("✅ Created prompt file for Claude");
     console.log(`Prompt file size: ${prompt.length} bytes`);
@@ -371,7 +399,7 @@ ${directPrompt || "Please help with the requested task."}`;
     if (provider && process.env.CLAUDE_COMMENT_ID) {
       try {
         await provider.updateComment(
-          parseInt(process.env.CLAUDE_COMMENT_ID),
+          parseInt(process.env.CLAUDE_COMMENT_ID, 10),
           `❌ Failed to prepare: ${errorMessage}`,
         );
       } catch (updateError) {

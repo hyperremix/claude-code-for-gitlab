@@ -43,7 +43,7 @@ async function testPipelineTrigger() {
 
     try {
       responseData = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       console.error("\n❌ Failed to parse response:");
       console.error("Status:", response.status, response.statusText);
       console.error("Response text:", responseText);

@@ -108,7 +108,7 @@ export function sendPipelineNotification(
         name: "Prompt",
         value:
           directPrompt.length > 100
-            ? directPrompt.substring(0, 100) + "..."
+            ? `${directPrompt.substring(0, 100)}...`
             : directPrompt,
         inline: false,
       });

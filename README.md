@@ -35,7 +35,7 @@ A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that b
 
 - **[👨‍💻 Contributing Guide](CONTRIBUTING.md)** - Development setup and contribution guidelines
 - **[📖 Claude Documentation](CLAUDE.md)** - Claude-specific technical details
-- **[📝 Examples](examples/README.md)** - Sample configurations and use cases
+- **[📝 Examples](docs/WEBHOOK_EXAMPLES.md)** - Sample configurations and use cases
 
 ## Architecture Overview
 
@@ -97,7 +97,7 @@ For detailed configuration options and advanced setup, see:
 @claude Resolve the memory leak in this component
 ```
 
-For more examples and detailed usage patterns, see the [Examples Documentation](examples/README.md).
+For more examples and detailed usage patterns, see the [Examples Documentation](docs/WEBHOOK_EXAMPLES.md).
 
 ## Capabilities and Limitations
 

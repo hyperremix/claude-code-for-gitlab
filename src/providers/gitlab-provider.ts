@@ -6,38 +6,38 @@
 
 import { Gitlab } from "@gitbeaker/rest";
 import { $ } from "bun";
-import type {
-  SCMProvider,
-  SCMContext,
-  RepoInfo,
-  PullRequestInfo,
-  CommentInfo,
-  FileChange,
-  BranchInfo,
-  GitLabProviderOptions,
-} from "./scm-provider";
 import {
+  type ParsedGitLabContext,
   parseGitLabContext,
   parseGitLabWebhookPayload,
-  type ParsedGitLabContext,
 } from "../gitlab/context";
-import { checkGitLabTriggerAction } from "../gitlab/validation/trigger";
 import {
-  fetchGitLabMRData,
   fetchGitLabIssueData,
+  fetchGitLabMRData,
 } from "../gitlab/data/fetcher";
+import { checkGitLabTriggerAction } from "../gitlab/validation/trigger";
 import type {
-  GitLabUser,
-  GitLabMergeRequest,
-  GitLabMergeRequestChanges,
-  GitLabDiscussion,
-  GitLabNote,
-  GitLabMember,
   GitLabBranch,
   GitLabCommit,
+  GitLabDiscussion,
+  GitLabMember,
+  GitLabMergeRequest,
+  GitLabMergeRequestChanges,
+  GitLabNote,
   GitLabProject,
   GitLabRepositoryFile,
+  GitLabUser,
 } from "../types/gitbeaker";
+import type {
+  BranchInfo,
+  CommentInfo,
+  FileChange,
+  GitLabProviderOptions,
+  PullRequestInfo,
+  RepoInfo,
+  SCMContext,
+  SCMProvider,
+} from "./scm-provider";
 
 export class GitLabProvider implements SCMProvider {
   private api: InstanceType<typeof Gitlab>;
@@ -138,9 +138,9 @@ export class GitLabProvider implements SCMProvider {
     const isMR =
       !!this.context.mrIid || webhook?.object_kind === "merge_request";
     const entityNumber = this.context.mrIid
-      ? parseInt(this.context.mrIid)
+      ? parseInt(this.context.mrIid, 10)
       : this.context.issueIid
-        ? parseInt(this.context.issueIid)
+        ? parseInt(this.context.issueIid, 10)
         : 0;
 
     return {
@@ -253,7 +253,7 @@ export class GitLabProvider implements SCMProvider {
 
     const mr = (await this.api.MergeRequests.show(
       this.context.projectId,
-      parseInt(this.context.mrIid),
+      parseInt(this.context.mrIid, 10),
     )) as unknown as GitLabMergeRequest;
 
     // Cache the MR info
@@ -285,13 +285,13 @@ export class GitLabProvider implements SCMProvider {
       // Get comments from merge request
       discussions = (await this.api.MergeRequestDiscussions.all(
         this.context.projectId,
-        parseInt(this.context.mrIid),
+        parseInt(this.context.mrIid, 10),
       )) as unknown as GitLabDiscussion[];
     } else if (this.context.issueIid) {
       // Get comments from issue
       discussions = (await this.api.IssueDiscussions.all(
         this.context.projectId,
-        parseInt(this.context.issueIid),
+        parseInt(this.context.issueIid, 10),
       )) as unknown as GitLabDiscussion[];
     } else {
       return [];
@@ -331,7 +331,7 @@ export class GitLabProvider implements SCMProvider {
         );
         note = (await this.api.MergeRequestNotes.create(
           this.context.projectId,
-          parseInt(this.context.mrIid),
+          parseInt(this.context.mrIid, 10),
           body,
         )) as unknown as GitLabNote;
       } else if (this.context.issueIid) {
@@ -340,7 +340,9 @@ export class GitLabProvider implements SCMProvider {
           `Creating issue comment using raw API for project ${this.context.projectId}, issue ${this.context.issueIid}`,
         );
         console.log(
-          `Token being used: length=${this.options.token.length}, prefix="${this.options.token.substring(0, 10)}..."`,
+          `Token being used: length=${
+            this.options.token.length
+          }, prefix="${this.options.token.substring(0, 10)}..."`,
         );
 
         const url = `${this.context.host}/api/v4/projects/${this.context.projectId}/issues/${this.context.issueIid}/notes`;
@@ -355,7 +357,7 @@ export class GitLabProvider implements SCMProvider {
           this.options.token.startsWith("glpat-") ||
           this.options.token.startsWith("gloas-")
         ) {
-          headers["Authorization"] = `Bearer ${this.options.token}`;
+          headers.Authorization = `Bearer ${this.options.token}`;
           console.log("Using Bearer token authentication");
         } else {
           headers["PRIVATE-TOKEN"] = this.options.token;
@@ -372,7 +374,9 @@ export class GitLabProvider implements SCMProvider {
 
         console.log(`Response status: ${response.status}`);
         console.log(
-          `Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`,
+          `Response headers: ${JSON.stringify(
+            Object.fromEntries(response.headers.entries()),
+          )}`,
         );
 
         if (!response.ok) {
@@ -413,7 +417,7 @@ export class GitLabProvider implements SCMProvider {
       // Update comment on merge request
       await this.api.MergeRequestNotes.edit(
         this.context.projectId,
-        parseInt(this.context.mrIid),
+        parseInt(this.context.mrIid, 10),
         commentId,
         { body },
       );
@@ -421,7 +425,7 @@ export class GitLabProvider implements SCMProvider {
       // Update comment on issue
       await this.api.IssueNotes.edit(
         this.context.projectId,
-        parseInt(this.context.issueIid),
+        parseInt(this.context.issueIid, 10),
         commentId,
         { body },
       );
@@ -439,7 +443,10 @@ export class GitLabProvider implements SCMProvider {
 
     // GitLab changes endpoint needs special handling
     const mr = (await (this.api as any).requester.get(
-      `/projects/${this.context.projectId}/merge_requests/${parseInt(this.context.mrIid)}/changes`,
+      `/projects/${this.context.projectId}/merge_requests/${parseInt(
+        this.context.mrIid,
+        10,
+      )}/changes`,
     )) as GitLabMergeRequestChanges;
 
     // Combine all file diffs
@@ -496,7 +503,10 @@ export class GitLabProvider implements SCMProvider {
 
     // GitLab changes endpoint needs special handling
     const mr = (await (this.api as any).requester.get(
-      `/projects/${this.context.projectId}/merge_requests/${parseInt(this.context.mrIid)}/changes`,
+      `/projects/${this.context.projectId}/merge_requests/${parseInt(
+        this.context.mrIid,
+        10,
+      )}/changes`,
     )) as GitLabMergeRequestChanges;
 
     return mr.changes.map((change) => {
@@ -580,7 +590,10 @@ export class GitLabProvider implements SCMProvider {
 
     // Set up authentication for push
     const encodedToken = encodeURIComponent(token);
-    const repoUrl = `https://oauth2:${encodedToken}@${this.context.host.replace("https://", "")}`;
+    const repoUrl = `https://oauth2:${encodedToken}@${this.context.host.replace(
+      "https://",
+      "",
+    )}`;
     await $`git remote set-url origin ${repoUrl}/${this.context.projectId}.git`.quiet();
   }
 
@@ -619,7 +632,7 @@ ${s.suggestion}
 
       await this.api.MergeRequestDiscussions.create(
         this.context.projectId,
-        parseInt(this.context.mrIid),
+        parseInt(this.context.mrIid, 10),
         body,
         { position },
       );

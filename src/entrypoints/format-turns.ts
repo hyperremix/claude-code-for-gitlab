@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { readFileSync, existsSync } from "fs";
-import { exit } from "process";
+import { existsSync, readFileSync } from "node:fs";
+import { exit } from "node:process";
 
 export type ToolUse = {
   type: string;
@@ -174,7 +174,7 @@ export function formatResultContent(content: any): string {
 
   // Truncate very long results
   if (contentStr.length > 3000) {
-    contentStr = contentStr.substring(0, 2997) + "...";
+    contentStr = `${contentStr.substring(0, 2997)}...`;
   }
 
   // Detect content type
@@ -351,7 +351,11 @@ export function formatGroupedContent(groupedContent: GroupedContent[]): string {
     if (itemType === "system_init") {
       markdown += `## 🚀 System Initialization\n\n**Available Tools:** ${item.tools_count} tools loaded\n\n---\n\n`;
     } else if (itemType === "system_other") {
-      markdown += `## ⚙️ System Message\n\n${JSON.stringify(item.data, null, 2)}\n\n---\n\n`;
+      markdown += `## ⚙️ System Message\n\n${JSON.stringify(
+        item.data,
+        null,
+        2,
+      )}\n\n---\n\n`;
     } else if (itemType === "assistant_action") {
       // Add text content first (if any) - no header needed
       for (const text of item.text_parts || []) {
@@ -401,7 +405,9 @@ export function formatGroupedContent(groupedContent: GroupedContent[]): string {
       if (resultText) {
         markdown += `${resultText}\n\n`;
       }
-      markdown += `**Cost:** $${cost.toFixed(4)} | **Duration:** ${(duration / 1000).toFixed(1)}s\n\n`;
+      markdown += `**Cost:** $${cost.toFixed(4)} | **Duration:** ${(
+        duration / 1000
+      ).toFixed(1)}s\n\n`;
     }
   }
 

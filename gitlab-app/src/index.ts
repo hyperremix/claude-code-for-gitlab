@@ -43,7 +43,7 @@ app.get("/health", (c) => c.text("ok"));
 // Optional admin endpoint to disable bot
 app.get(
   "/admin/disable",
-  bearerAuth({ token: process.env.ADMIN_TOKEN! }),
+  bearerAuth({ token: process.env.ADMIN_TOKEN || "" }),
   (c) => {
     process.env.CLAUDE_DISABLED = "true";
     logger.warn("Bot disabled via admin endpoint");
@@ -53,7 +53,7 @@ app.get(
 
 app.get(
   "/admin/enable",
-  bearerAuth({ token: process.env.ADMIN_TOKEN! }),
+  bearerAuth({ token: process.env.ADMIN_TOKEN || "" }),
   (c) => {
     process.env.CLAUDE_DISABLED = "false";
     logger.info("Bot enabled via admin endpoint");
