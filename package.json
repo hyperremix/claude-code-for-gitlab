@@ -7,8 +7,13 @@
     "format:check": "prettier --check .",
     "install-hooks": "bun run scripts/install-hooks.sh",
     "test": "bun run scripts/run-tests.sh",
-    "test:webhook": "echo 'Webhook service tests temporarily disabled - run manually in webhook-service directory'",
-    "typecheck": "tsc --noEmit"
+    "test:all": "bun test && cd gitlab-app && bun test",
+    "test:webhook": "cd gitlab-app && bun test",
+    "typecheck": "tsc --noEmit",
+    "webhook:dev": "cd gitlab-app && bun run dev",
+    "webhook:build": "cd gitlab-app && bun run build",
+    "webhook:start": "cd gitlab-app && bun run start",
+    "webhook:setup": "cd gitlab-app && bun install"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.60",
