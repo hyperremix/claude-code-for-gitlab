@@ -1,5 +1,3 @@
-![Claude Code responding to a comment](./docs/assets/claude-code-response.png)
-
 # 🦊 Claude Code for GitLab
 
 A GitLab-specific implementation of [Claude Code](https://claude.ai/code) that brings AI-powered assistance to GitLab merge requests and issues through a **webhook-only architecture**. This project enables Claude to respond to mentions in GitLab comments, implement code changes, and provide intelligent code assistance directly within your GitLab workflow.
