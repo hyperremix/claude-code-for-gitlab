@@ -56,8 +56,8 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
 
 - `bun test` - Run all tests
 - `bun run typecheck` - Type check the code
-- `bun run format` - Format code with Prettier
-- `bun run format:check` - Check code formatting
+- `bun run format:fix` - Format code with Biome
+- `bun run format` - Check code formatting
 
 #### Webhook Server Scripts
 
@@ -145,7 +145,7 @@ Thank you for your interest in contributing to Claude Code for GitLab! This docu
    ```bash
    bun test
    bun run typecheck
-   bun run format:check
+   bun run format
 
    # Also test webhook server
    cd gitlab-app

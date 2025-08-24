@@ -7,8 +7,8 @@
  * - GitLab: CI_BUILDS_DIR is the main workspace for job execution
  */
 
-import { existsSync, mkdirSync } from "fs";
-import { join } from "path";
+import { existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Get the appropriate temporary directory for GitLab CI

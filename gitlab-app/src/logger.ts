@@ -91,7 +91,7 @@ class Logger {
         sensitiveKeys.some((k) => lowerKey.includes(k)) &&
         typeof value === "string"
       ) {
-        masked[key] = value.substring(0, 4) + "****";
+        masked[key] = `${value.substring(0, 4)}****`;
       } else if (typeof value === "object") {
         masked[key] = this.maskSensitive(value);
       }

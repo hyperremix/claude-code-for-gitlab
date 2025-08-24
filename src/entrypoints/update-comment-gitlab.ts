@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
+import * as fs from "node:fs/promises";
 import type { SDKMessage } from "@anthropic-ai/claude-code";
 import { Gitlab } from "@gitbeaker/rest";
-import * as fs from "fs/promises";
 import type { GitLabNote } from "../types/gitbeaker";
 
 /**
@@ -79,8 +79,8 @@ function formatGitLabCommentBody(
 
 async function run() {
   try {
-    const commentId = parseInt(process.env.CLAUDE_COMMENT_ID!);
-    if (isNaN(commentId)) {
+    const commentId = parseInt(process.env.CLAUDE_COMMENT_ID || "", 10);
+    if (Number.isNaN(commentId)) {
       throw new Error("CLAUDE_COMMENT_ID env var is not a valid number.");
     }
 
@@ -123,18 +123,18 @@ async function run() {
         // Merge request context
         notes = (await api.MergeRequestNotes.all(
           projectId,
-          parseInt(mrIid),
+          parseInt(mrIid, 10),
         )) as unknown as GitLabNote[];
         resourceType = "merge request";
-        resourceIid = parseInt(mrIid);
+        resourceIid = parseInt(mrIid, 10);
       } else if (issueIid) {
         // Issue context
         notes = (await api.IssueNotes.all(
           projectId,
-          parseInt(issueIid),
+          parseInt(issueIid, 10),
         )) as unknown as GitLabNote[];
         resourceType = "issue";
-        resourceIid = parseInt(issueIid);
+        resourceIid = parseInt(issueIid, 10);
       } else {
         throw new Error("No merge request or issue context found");
       }

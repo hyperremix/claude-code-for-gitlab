@@ -5,13 +5,13 @@
  */
 
 import { Gitlab } from "@gitbeaker/rest";
-import type { ParsedGitLabContext } from "../context";
 import type {
-  GitLabMergeRequest,
-  GitLabMergeRequestChanges,
   GitLabDiscussion,
   GitLabIssue,
+  GitLabMergeRequest,
+  GitLabMergeRequestChanges,
 } from "../../types/gitbeaker";
+import type { ParsedGitLabContext } from "../context";
 
 export interface GitLabMRData {
   iid: number;
@@ -70,14 +70,17 @@ export async function fetchGitLabMRData(
   const [mrDetails, mrChanges, discussions] = await Promise.all([
     api.MergeRequests.show(
       context.projectId,
-      parseInt(context.mrIid),
+      parseInt(context.mrIid, 10),
     ) as Promise<unknown>,
     (api as any).requester.get(
-      `/projects/${context.projectId}/merge_requests/${parseInt(context.mrIid)}/changes`,
+      `/projects/${context.projectId}/merge_requests/${parseInt(
+        context.mrIid,
+        10,
+      )}/changes`,
     ) as Promise<GitLabMergeRequestChanges>,
     api.MergeRequestDiscussions.all(
       context.projectId,
-      parseInt(context.mrIid),
+      parseInt(context.mrIid, 10),
     ) as Promise<unknown>,
   ]);
 
@@ -159,12 +162,12 @@ export async function fetchGitLabIssueData(
   // Fetch issue details and discussions
   const [issueDetails, discussions] = await Promise.all([
     api.Issues.show(
-      typeof issueIid === "string" ? parseInt(issueIid) : issueIid,
+      typeof issueIid === "string" ? parseInt(issueIid, 10) : issueIid,
       { projectId: context.projectId },
     ) as Promise<unknown>,
     api.IssueDiscussions.all(
       context.projectId,
-      typeof issueIid === "string" ? parseInt(issueIid) : issueIid,
+      typeof issueIid === "string" ? parseInt(issueIid, 10) : issueIid,
     ) as Promise<unknown>,
   ]);
 

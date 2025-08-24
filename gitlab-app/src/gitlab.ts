@@ -4,7 +4,7 @@ import { logger } from "./logger";
 // Initialize GitLab client
 const gitlab = new Gitlab({
   host: process.env.GITLAB_URL || "https://gitlab.com",
-  token: process.env.GITLAB_TOKEN!,
+  token: process.env.GITLAB_TOKEN || "",
 });
 
 export async function triggerPipeline(
@@ -21,7 +21,7 @@ export async function triggerPipeline(
 
     // Use fetch directly for better error handling
     const gitlabUrl = process.env.GITLAB_URL || "https://gitlab.com";
-    const token = process.env.GITLAB_TOKEN!;
+    const token = process.env.GITLAB_TOKEN || "";
 
     // Transform variables to GitLab API format
     const pipelineVariables = variables
@@ -54,11 +54,11 @@ export async function triggerPipeline(
     );
 
     const responseText = await response.text();
-    let responseData;
+    let responseData: any;
 
     try {
       responseData = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       logger.error("Failed to parse pipeline response", {
         status: response.status,
         statusText: response.statusText,
@@ -194,7 +194,7 @@ export async function createBranch(
 
     // Use raw API for better error handling
     const gitlabUrl = process.env.GITLAB_URL || "https://gitlab.com";
-    const token = process.env.GITLAB_TOKEN!;
+    const token = process.env.GITLAB_TOKEN || "";
 
     const response = await fetch(
       `${gitlabUrl}/api/v4/projects/${projectId}/repository/branches`,

@@ -5,8 +5,8 @@
  * This replaces the multi-step shell commands in GitLab CI with a single TypeScript file
  */
 
+import * as path from "node:path";
 import { $ } from "bun";
-import * as path from "path";
 import {
   getClaudeExecutionOutputPath,
   getClaudePromptsDirectory,
@@ -54,13 +54,13 @@ async function runPreparePhase(): Promise<PhaseResult> {
     // Extract comment ID from file written by prepare.ts
     let commentId: number | undefined;
     try {
-      const fs = await import("fs");
+      const fs = await import("node:fs");
       if (fs.existsSync("/tmp/claude-comment-id.txt")) {
         const commentIdStr = fs
           .readFileSync("/tmp/claude-comment-id.txt", "utf-8")
           .trim();
         if (commentIdStr) {
-          commentId = parseInt(commentIdStr);
+          commentId = parseInt(commentIdStr, 10);
           console.log(`Extracted comment ID from file: ${commentId}`);
         }
       }
@@ -108,7 +108,7 @@ async function runExecutePhase(
     const promptPath = `${getClaudePromptsDirectory()}/claude-prompt.txt`;
     let promptContent = "";
     try {
-      const fs = await import("fs");
+      const fs = await import("node:fs");
       promptContent = await fs.promises.readFile(promptPath, "utf-8");
       console.log(
         `Prompt file loaded, size: ${promptContent.length} characters`,
@@ -331,7 +331,7 @@ async function postClaudeResponse(
     console.log("=========================================");
 
     // Read the output file
-    const fs = await import("fs");
+    const fs = await import("node:fs");
     const outputPath =
       executeResult.outputFile || getClaudeExecutionOutputPath();
 
@@ -360,7 +360,7 @@ async function postClaudeResponse(
             let tempMessage = "";
             for (const content of output.message.content) {
               if (content.type === "text") {
-                tempMessage += content.text + "\n";
+                tempMessage += `${content.text}\n`;
               }
             }
             if (tempMessage) {
@@ -369,7 +369,6 @@ async function postClaudeResponse(
           }
         } catch (parseError) {
           console.error("Error parsing line:", parseError);
-          continue;
         }
       }
 

@@ -65,8 +65,6 @@ src/                          # Supporting Libraries (Used by Webhook Server)
     └── gitbeaker.ts          # GitLab API types
 
 gitlab-claude-unified.yml     # Example CI/CD pipeline for webhook-triggered execution
-examples/                     # Documentation and setup examples
-└── README.md                 # Webhook server setup guide
 
 docs/                         # Documentation
 ├── AUTHENTICATION_GUIDE.md   # Complete authentication setup
@@ -74,7 +72,8 @@ docs/                         # Documentation
 ├── WEBHOOK_DEPLOYMENT.md     # Advanced deployment guide
 ├── TROUBLESHOOTING.md        # Issue resolution guide
 ├── GITLAB_CLAUDE_EXECUTION_GUIDE.md  # Webhook execution flow
-└── TEMP_DIRECTORY_HANDLING.md        # Technical implementation details
+├── GITLAB_CLAUDE_EXECUTION_GUIDE.md  # Webhook execution flow
+└── WEBHOOK_EXAMPLES.md               # Webhook server setup guide
 ```
 
 ## Development Environment
@@ -98,7 +97,7 @@ bun run typecheck
 bun test
 
 # Format code
-bun run format
+bun run format:fix
 ```
 
 ### Development Commands
@@ -107,8 +106,8 @@ bun run format
 # Development and testing
 bun run typecheck          # TypeScript type checking
 bun test                   # Run test suite
-bun run format            # Code formatting with Prettier
-bun run format:check      # Check code formatting
+bun run format:fix         # Code formatting with Biome
+bun run format             # Check code formatting
 
 # GitLab integration testing
 bun test test/gitlab/     # GitLab-specific tests

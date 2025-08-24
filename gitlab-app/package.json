@@ -7,7 +7,11 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write ."
   },
   "dependencies": {
     "@gitbeaker/rest": "^40.1.1",
@@ -15,6 +19,7 @@
     "redis": "^4.7.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.2",
     "@types/node": "^20.10.0",
     "typescript": "^5.3.3"
   },

@@ -5,14 +5,14 @@
  * This script runs in the GitLab CI pipeline when triggered by the webhook server
  */
 
+import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { Gitlab } from "@gitbeaker/rest";
-import { execSync } from "child_process";
-import { writeFileSync } from "fs";
 
 // Initialize GitLab client
 const gitlab = new Gitlab({
   host: process.env.CI_SERVER_URL || "https://gitlab.com",
-  token: process.env.GITLAB_TOKEN!,
+  token: process.env.GITLAB_TOKEN || "",
 });
 
 interface ClaudeContext {
@@ -117,11 +117,15 @@ async function postComment(context: ClaudeContext, message: string) {
 
   try {
     if (resourceType === "issue") {
-      await gitlab.IssueNotes.create(projectId, parseInt(resourceId), message);
+      await gitlab.IssueNotes.create(
+        projectId,
+        parseInt(resourceId, 10),
+        message,
+      );
     } else if (resourceType === "merge_request") {
       await gitlab.MergeRequestNotes.create(
         projectId,
-        parseInt(resourceId),
+        parseInt(resourceId, 10),
         message,
       );
     }
@@ -135,13 +139,13 @@ async function postComment(context: ClaudeContext, message: string) {
 async function main() {
   // Parse context from environment variables
   const context: ClaudeContext = {
-    projectId: process.env.CI_PROJECT_ID!,
+    projectId: process.env.CI_PROJECT_ID || "not-set",
     resourceType: process.env.CLAUDE_RESOURCE_TYPE as "merge_request" | "issue",
-    resourceId: process.env.CLAUDE_RESOURCE_ID!,
-    branch: process.env.CLAUDE_BRANCH!,
-    author: process.env.CLAUDE_AUTHOR!,
-    note: process.env.CLAUDE_NOTE!,
-    projectPath: process.env.CLAUDE_PROJECT_PATH!,
+    resourceId: process.env.CLAUDE_RESOURCE_ID || "not-set",
+    branch: process.env.CLAUDE_BRANCH || "not-set",
+    author: process.env.CLAUDE_AUTHOR || "not-set",
+    note: process.env.CLAUDE_NOTE || "not-set",
+    projectPath: process.env.CLAUDE_PROJECT_PATH || "not-set",
   };
 
   console.log("🚀 Claude Pipeline Runner Started");
@@ -171,7 +175,11 @@ async function main() {
       // Commit changes
       execSync("git add -A");
       execSync(
-        `git commit -m "Claude: ${prompt.substring(0, 50)}${prompt.length > 50 ? "..." : ""}"\n\nRequested by @${context.author} in ${context.resourceType} #${context.resourceId}`,
+        `git commit -m "Claude: ${prompt.substring(0, 50)}${
+          prompt.length > 50 ? "..." : ""
+        }"\n\nRequested by @${context.author} in ${context.resourceType} #${
+          context.resourceId
+        }`,
       );
 
       // Push changes
@@ -198,7 +206,9 @@ async function main() {
       await postComment(
         context,
         `ℹ️ Claude analyzed your request but no code changes were needed.\n\n` +
-          `Response: ${claudeOutput.substring(0, 500)}${claudeOutput.length > 500 ? "..." : ""}`,
+          `Response: ${claudeOutput.substring(0, 500)}${
+            claudeOutput.length > 500 ? "..." : ""
+          }`,
       );
     }
 
@@ -220,7 +230,9 @@ async function main() {
     await postComment(
       context,
       `❌ Claude encountered an error while processing your request:\n\n` +
-        `\`\`\`\n${error instanceof Error ? error.message : String(error)}\n\`\`\``,
+        `\`\`\`\n${
+          error instanceof Error ? error.message : String(error)
+        }\n\`\`\``,
     );
 
     // Save error output
