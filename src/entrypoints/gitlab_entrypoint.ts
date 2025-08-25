@@ -19,7 +19,7 @@ interface PhaseResult {
   outputFile?: string;
 }
 
-async function runPreparePhase(): Promise<PhaseResult> {
+export async function runPreparePhase(): Promise<PhaseResult> {
   try {
     console.log("=========================================");
     console.log("Phase 1: Preparing Claude Code for GitLab...");
@@ -81,7 +81,7 @@ async function runPreparePhase(): Promise<PhaseResult> {
   }
 }
 
-async function runExecutePhase(
+export async function runExecutePhase(
   prepareResult: PhaseResult,
 ): Promise<PhaseResult> {
   try {
@@ -199,7 +199,7 @@ async function runExecutePhase(
   }
 }
 
-async function checkGitStatus(): Promise<boolean> {
+export async function checkGitStatus(): Promise<boolean> {
   try {
     // Clean up any temporary output files before checking git status
     // These files might be created by Claude Code during execution
@@ -220,7 +220,7 @@ async function checkGitStatus(): Promise<boolean> {
   }
 }
 
-async function createMergeRequest(
+export async function createMergeRequest(
   prepareResult: PhaseResult,
   _executeResult: PhaseResult,
 ): Promise<void> {
@@ -321,7 +321,7 @@ See the original ${process.env.CLAUDE_RESOURCE_TYPE} for context.`;
   }
 }
 
-async function postClaudeResponse(
+export async function postClaudeResponse(
   _prepareResult: PhaseResult,
   executeResult: PhaseResult,
 ): Promise<void> {
@@ -404,7 +404,7 @@ ${claudeMessage}
   }
 }
 
-async function runUpdatePhase(
+export async function runUpdatePhase(
   prepareResult: PhaseResult,
   executeResult: PhaseResult,
 ): Promise<PhaseResult> {
@@ -474,7 +474,7 @@ async function runUpdatePhase(
   }
 }
 
-async function main() {
+export async function main() {
   let exitCode = 0;
   let prepareResult: PhaseResult = { success: false };
   let executeResult: PhaseResult = { success: false };

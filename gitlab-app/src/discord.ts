@@ -27,132 +27,126 @@ export function sendPipelineNotification(
     return;
   }
 
-  try {
-    const {
-      projectPath,
-      authorUsername,
-      resourceType,
-      resourceId,
-      branch,
-      pipelineId,
-      gitlabUrl,
-      triggerPhrase,
-      directPrompt,
-      issueTitle,
-    } = options;
+  const {
+    projectPath,
+    authorUsername,
+    resourceType,
+    resourceId,
+    branch,
+    pipelineId,
+    gitlabUrl,
+    triggerPhrase,
+    directPrompt,
+    issueTitle,
+  } = options;
 
-    // Construct pipeline URL
-    const pipelineUrl = `${gitlabUrl}/${projectPath}/-/pipelines/${pipelineId}`;
+  // Construct pipeline URL
+  const pipelineUrl = `${gitlabUrl}/${projectPath}/-/pipelines/${pipelineId}`;
 
-    // Determine resource URL
-    const resourceUrl =
-      resourceType === "merge_request"
-        ? `${gitlabUrl}/${projectPath}/-/merge_requests/${resourceId}`
-        : resourceType === "issue"
-          ? `${gitlabUrl}/${projectPath}/-/issues/${resourceId}`
-          : null;
+  // Determine resource URL
+  const resourceUrl =
+    resourceType === "merge_request"
+      ? `${gitlabUrl}/${projectPath}/-/merge_requests/${resourceId}`
+      : resourceType === "issue"
+        ? `${gitlabUrl}/${projectPath}/-/issues/${resourceId}`
+        : null;
 
-    // Create Discord embed
-    const embed = {
-      title: "🤖 Claude Pipeline Triggered",
-      url: pipelineUrl,
-      color: 0xfc6d26, // GitLab orange
-      fields: [
-        {
-          name: "Project",
-          value: projectPath,
-          inline: true,
-        },
-        {
-          name: "Triggered By",
-          value: `@${authorUsername}`,
-          inline: true,
-        },
-        {
-          name: "Resource",
-          value:
-            resourceType === "merge_request"
-              ? `Merge Request !${resourceId}`
-              : resourceType === "issue"
-                ? `Issue #${resourceId}${issueTitle ? ` - ${issueTitle}` : ""}`
-                : "Unknown",
-          inline: true,
-        },
-        {
-          name: "Branch",
-          value: `\`${branch}\``,
-          inline: true,
-        },
-        {
-          name: "Pipeline ID",
-          value: `[#${pipelineId}](${pipelineUrl})`,
-          inline: true,
-        },
-        {
-          name: "Trigger",
-          value: triggerPhrase,
-          inline: true,
-        },
-      ],
-      footer: {
-        text: "GitLab Claude Webhook",
-        icon_url:
-          "https://about.gitlab.com/images/press/logo/png/gitlab-icon-rgb.png",
+  // Create Discord embed
+  const embed = {
+    title: "🤖 Claude Pipeline Triggered",
+    url: pipelineUrl,
+    color: 0xfc6d26, // GitLab orange
+    fields: [
+      {
+        name: "Project",
+        value: projectPath,
+        inline: true,
       },
-      timestamp: new Date().toISOString(),
-    };
-
-    // Add prompt if present
-    if (directPrompt) {
-      embed.fields.push({
-        name: "Prompt",
+      {
+        name: "Triggered By",
+        value: `@${authorUsername}`,
+        inline: true,
+      },
+      {
+        name: "Resource",
         value:
-          directPrompt.length > 100
-            ? `${directPrompt.substring(0, 100)}...`
-            : directPrompt,
-        inline: false,
-      });
-    }
+          resourceType === "merge_request"
+            ? `Merge Request !${resourceId}`
+            : resourceType === "issue"
+              ? `Issue #${resourceId}${issueTitle ? ` - ${issueTitle}` : ""}`
+              : "Unknown",
+        inline: true,
+      },
+      {
+        name: "Branch",
+        value: `\`${branch}\``,
+        inline: true,
+      },
+      {
+        name: "Pipeline ID",
+        value: `[#${pipelineId}](${pipelineUrl})`,
+        inline: true,
+      },
+      {
+        name: "Trigger",
+        value: triggerPhrase,
+        inline: true,
+      },
+    ],
+    footer: {
+      text: "GitLab Claude Webhook",
+      icon_url:
+        "https://about.gitlab.com/images/press/logo/png/gitlab-icon-rgb.png",
+    },
+    timestamp: new Date().toISOString(),
+  };
 
-    // Add resource link if available
-    if (resourceUrl) {
-      embed.fields.push({
-        name: "View Resource",
-        value: `[Open in GitLab](${resourceUrl})`,
-        inline: false,
-      });
-    }
-
-    const payload = {
-      embeds: [embed],
-    };
-
-    // Send notification without awaiting (fire-and-forget)
-    fetch(discordWebhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          logger.warn(`Discord notification failed`, {
-            status: response.status,
-            statusText: response.statusText,
-          });
-        } else {
-          logger.debug("Discord notification sent successfully");
-        }
-      })
-      .catch((error) => {
-        logger.error("Error sending Discord notification", {
-          error: error instanceof Error ? error.message : error,
-        });
-      });
-  } catch (error) {
-    logger.error("Failed to prepare Discord notification", {
-      error: error instanceof Error ? error.message : error,
+  // Add prompt if present
+  if (directPrompt) {
+    embed.fields.push({
+      name: "Prompt",
+      value:
+        directPrompt.length > 100
+          ? `${directPrompt.substring(0, 100)}...`
+          : directPrompt,
+      inline: false,
     });
   }
+
+  // Add resource link if available
+  if (resourceUrl) {
+    embed.fields.push({
+      name: "View Resource",
+      value: `[Open in GitLab](${resourceUrl})`,
+      inline: false,
+    });
+  }
+
+  const payload = {
+    embeds: [embed],
+  };
+
+  // Send notification without awaiting (fire-and-forget)
+  fetch(discordWebhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        logger.warn(`Discord notification failed`, {
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else {
+        logger.debug("Discord notification sent successfully");
+      }
+    })
+    .catch((error) => {
+      logger.error("Error sending Discord notification", {
+        error: error instanceof Error ? error.message : error,
+      });
+    });
 }
 
 /**
