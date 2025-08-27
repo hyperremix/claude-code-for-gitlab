@@ -34,8 +34,6 @@ The project uses a **webhook-only architecture** that consists of a standalone w
 gitlab-app/                   # Webhook Server (Primary Component)
 ├── src/                      # Application source
 │   ├── index.ts              # Main webhook server entry point
-│   ├── gitlab.ts             # GitLab API integration
-│   ├── pipeline-runner.ts    # Pipeline triggering logic
 │   ├── limiter.ts            # Redis rate limiting
 │   ├── discord.ts            # Discord notifications
 │   ├── logger.ts             # Logging utilities
@@ -132,8 +130,6 @@ bun test test/providers/  # Provider tests
 ### Webhook Server Components
 
 - **Webhook Handler** (`gitlab-app/src/index.ts`): Main webhook server entry point
-- **GitLab Integration** (`gitlab-app/src/gitlab.ts`): GitLab API operations and project management
-- **Pipeline Runner** (`gitlab-app/src/pipeline-runner.ts`): CI/CD pipeline triggering logic
 - **Rate Limiter** (`gitlab-app/src/limiter.ts`): Redis-based rate limiting functionality
 - **Discord Notifications** (`gitlab-app/src/discord.ts`): Optional Discord webhook integration
 

@@ -1,0 +1,221 @@
+import type { IEnvironmentService, IHttpClient } from "../../../src/interfaces";
+import { EnvVar } from "../../../src/types";
+import type { IDiscordService, ILoggerService } from "../interfaces";
+import type { DiscordNotificationOptions } from "../types";
+
+export class DiscordService implements IDiscordService {
+  constructor(
+    private logger: ILoggerService,
+    private environment: IEnvironmentService,
+    private httpClient: IHttpClient,
+  ) {}
+
+  sendPipelineNotification(options: DiscordNotificationOptions): void {
+    const discordWebhookUrl = this.environment.get(EnvVar.DISCORD_WEBHOOK_URL);
+
+    if (!discordWebhookUrl) {
+      // Discord notifications are optional
+      return;
+    }
+
+    try {
+      const {
+        projectPath,
+        authorUsername,
+        resourceType,
+        resourceId,
+        branch,
+        pipelineId,
+        gitlabUrl,
+        triggerPhrase,
+        directPrompt,
+        issueTitle,
+      } = options;
+
+      // Construct pipeline URL
+      const pipelineUrl = `${gitlabUrl}/${projectPath}/-/pipelines/${pipelineId}`;
+
+      // Determine resource URL
+      const resourceUrl =
+        resourceType === "merge_request"
+          ? `${gitlabUrl}/${projectPath}/-/merge_requests/${resourceId}`
+          : resourceType === "issue"
+            ? `${gitlabUrl}/${projectPath}/-/issues/${resourceId}`
+            : null;
+
+      // Create Discord embed
+      const embed = {
+        title: "🤖 Claude Pipeline Triggered",
+        url: pipelineUrl,
+        color: 0xfc6d26, // GitLab orange
+        fields: [
+          {
+            name: "Project",
+            value: projectPath,
+            inline: true,
+          },
+          {
+            name: "Triggered By",
+            value: `@${authorUsername}`,
+            inline: true,
+          },
+          {
+            name: "Resource",
+            value:
+              resourceType === "merge_request"
+                ? `Merge Request !${resourceId}`
+                : resourceType === "issue"
+                  ? `Issue #${resourceId}${issueTitle ? ` - ${issueTitle}` : ""}`
+                  : "Unknown",
+            inline: true,
+          },
+          {
+            name: "Branch",
+            value: `\`${branch}\``,
+            inline: true,
+          },
+          {
+            name: "Pipeline ID",
+            value: `[#${pipelineId}](${pipelineUrl})`,
+            inline: true,
+          },
+          {
+            name: "Trigger",
+            value: triggerPhrase,
+            inline: true,
+          },
+        ],
+        footer: {
+          text: "GitLab Claude Webhook",
+          icon_url:
+            "https://about.gitlab.com/images/press/logo/png/gitlab-icon-rgb.png",
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      // Add prompt if present
+      if (directPrompt) {
+        embed.fields.push({
+          name: "Prompt",
+          value:
+            directPrompt.length > 100
+              ? `${directPrompt.substring(0, 100)}...`
+              : directPrompt,
+          inline: false,
+        });
+      }
+
+      // Add resource link if available
+      if (resourceUrl) {
+        embed.fields.push({
+          name: "View Resource",
+          value: `[Open in GitLab](${resourceUrl})`,
+          inline: false,
+        });
+      }
+
+      const payload = {
+        embeds: [embed],
+      };
+
+      // Send notification without awaiting (fire-and-forget)
+      this.httpClient
+        .fetch(discordWebhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        .then((response) => {
+          if (!response.ok) {
+            this.logger.warn(`Discord notification failed`, {
+              status: response.status,
+              statusText: response.statusText,
+            });
+          } else {
+            this.logger.debug("Discord notification sent successfully");
+          }
+        })
+        .catch((error) => {
+          this.logger.error("Error sending Discord notification", {
+            error: error instanceof Error ? error.message : error,
+          });
+        });
+    } catch (error) {
+      this.logger.error("Failed to prepare Discord notification", {
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  sendRateLimitNotification(
+    projectPath: string,
+    authorUsername: string,
+    resourceType: string,
+    resourceId: string,
+  ): void {
+    const discordWebhookUrl = this.environment.get(EnvVar.DISCORD_WEBHOOK_URL);
+
+    if (!discordWebhookUrl) {
+      return;
+    }
+
+    try {
+      const embed = {
+        title: "⚠️ Rate Limit Exceeded",
+        color: 0xff0000, // Red
+        description: `Claude requests have been rate-limited for @${authorUsername}`,
+        fields: [
+          {
+            name: "Project",
+            value: projectPath,
+            inline: true,
+          },
+          {
+            name: "User",
+            value: `@${authorUsername}`,
+            inline: true,
+          },
+          {
+            name: "Resource",
+            value: `${resourceType} ${resourceId}`,
+            inline: true,
+          },
+        ],
+        footer: {
+          text: "GitLab Claude Webhook - Rate Limited",
+          icon_url:
+            "https://about.gitlab.com/images/press/logo/png/gitlab-icon-rgb.png",
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      const payload = {
+        embeds: [embed],
+      };
+
+      // Send notification without awaiting
+      this.httpClient
+        .fetch(discordWebhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        .then((response) => {
+          if (!response.ok) {
+            this.logger.warn(`Discord rate limit notification failed`, {
+              status: response.status,
+            });
+          }
+        })
+        .catch((error) => {
+          this.logger.error("Error sending Discord rate limit notification", {
+            error: error instanceof Error ? error.message : error,
+          });
+        });
+    } catch (error) {
+      this.logger.error("Failed to prepare Discord rate limit notification", {
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+}

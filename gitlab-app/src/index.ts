@@ -1,16 +1,33 @@
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
-import { sendPipelineNotification, sendRateLimitNotification } from "./discord";
-import {
-  cancelOldPipelines,
-  createBranch,
-  getProject,
-  sanitizeBranchName,
-  triggerPipeline,
-} from "./gitlab";
-import { limitByUser } from "./limiter";
-import { logger } from "./logger";
+import { createServiceContainer } from "../../src/services";
+import { EnvVar } from "../../src/types";
+import { DiscordService, LimiterService } from "./services";
+import { LoggerService } from "./services/logger.service";
+import { RedisAdapterFactory } from "./services/redis.factory";
 import type { WebhookPayload } from "./types";
+import { WebhookOrchestrator } from "./webhook-orchestrator";
+
+// Create service container with real implementations
+const services = createServiceContainer();
+const logger = new LoggerService(services.environment);
+const discord = new DiscordService(
+  logger,
+  services.environment,
+  services.httpClient,
+);
+const redisAdapterFactory = new RedisAdapterFactory(services.environment);
+const limiter = new LimiterService(redisAdapterFactory, services.environment);
+
+// Create webhook orchestrator with injected services
+const webhookOrchestrator = new WebhookOrchestrator(
+  services.environment,
+  services.logger,
+  services.httpClient,
+  services.gitLabAdapter,
+  discord,
+  limiter,
+);
 
 const app = new Hono();
 
@@ -20,10 +37,12 @@ app.use("*", async (c, next) => {
   const method = c.req.method;
   const path = c.req.path;
 
-  logger.info(`${method} ${path}`, {
+  services.logger.info(`${method} ${path}`, {
     method,
     path,
-    headers: logger.maskSensitive(Object.fromEntries(c.req.raw.headers)),
+    headers: services.logger.maskSensitive(
+      Object.fromEntries(c.req.raw.headers),
+    ),
   });
 
   await next();
@@ -31,32 +50,33 @@ app.use("*", async (c, next) => {
   const duration = Date.now() - start;
   const status = c.res.status;
 
-  logger.info(`${method} ${path} ${status} ${duration}ms`, {
+  services.logger.info(`${method} ${path} ${status} ${duration}ms`, {
     method,
     path,
     status,
     duration,
   });
 });
+
 app.get("/health", (c) => c.text("ok"));
 
 // Optional admin endpoint to disable bot
 app.get(
   "/admin/disable",
-  bearerAuth({ token: process.env.ADMIN_TOKEN || "" }),
+  bearerAuth({ token: services.environment.get(EnvVar.ADMIN_TOKEN) || "" }),
   (c) => {
-    process.env.CLAUDE_DISABLED = "true";
-    logger.warn("Bot disabled via admin endpoint");
+    services.environment.set(EnvVar.CLAUDE_ENABLED, "true");
+    services.logger.warn("Bot disabled via admin endpoint");
     return c.text("disabled");
   },
 );
 
 app.get(
   "/admin/enable",
-  bearerAuth({ token: process.env.ADMIN_TOKEN || "" }),
+  bearerAuth({ token: services.environment.get(EnvVar.ADMIN_TOKEN) || "" }),
   (c) => {
-    process.env.CLAUDE_DISABLED = "false";
-    logger.info("Bot enabled via admin endpoint");
+    services.environment.set(EnvVar.CLAUDE_ENABLED, "false");
+    services.logger.info("Bot enabled via admin endpoint");
     return c.text("enabled");
   },
 );
@@ -66,216 +86,50 @@ app.post("/webhook", async (c) => {
   const gitlabEvent = c.req.header("x-gitlab-event");
   const gitlabToken = c.req.header("x-gitlab-token");
 
-  logger.debug("Webhook received", {
+  services.logger.debug("Webhook received", {
     event: gitlabEvent,
     hasToken: !!gitlabToken,
   });
 
-  // Verify webhook secret
-  if (gitlabToken !== process.env.WEBHOOK_SECRET) {
-    logger.warn("Webhook unauthorized - invalid token");
-    return c.text("unauthorized", 401);
-  }
-
-  // Only handle Note Hook events
-  if (gitlabEvent !== "Note Hook") {
-    logger.debug("Ignoring non-Note Hook event", { event: gitlabEvent });
-    return c.text("ignored");
-  }
-
   const body = await c.req.json<WebhookPayload>();
 
-  // Log webhook payload (with sensitive data masked)
-  logger.debug("Webhook payload received", {
-    payload: logger.maskSensitive(body),
-  });
-
-  const note = body.object_attributes?.note || "";
-  const projectId = body.project?.id;
-  const projectPath = body.project?.path_with_namespace;
-  const mrIid = body.merge_request?.iid;
-  const issueIid = body.issue?.iid;
-  const issueTitle = body.issue?.title;
-  const authorUsername = body.user?.username;
-
-  // Get trigger phrase from environment or use default
-  const triggerPhrase = process.env.TRIGGER_PHRASE || "@claude";
-  const triggerRegex = new RegExp(
-    `${triggerPhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-    "i",
+  // Process webhook using orchestrator
+  const result = await webhookOrchestrator.processWebhook(
+    gitlabEvent,
+    gitlabToken,
+    body,
   );
 
-  // Check for trigger phrase mention
-  if (!triggerRegex.test(note)) {
-    logger.debug(`No ${triggerPhrase} mention found in note`);
-    return c.text("skipped");
-  }
-
-  if (process.env.CLAUDE_DISABLED === "true") {
-    logger.warn("Bot is disabled, skipping trigger");
-    return c.text("disabled");
-  }
-
-  // Rate limit: 3 triggers per author per MR/issue per 15 min
-  const resourceId = mrIid || issueIid || "general";
-  const key = `${authorUsername}:${projectId}:${resourceId}`;
-
-  if (!(await limitByUser(key))) {
-    logger.warn("Rate limit exceeded", { key, author: authorUsername });
-
-    // Send Discord notification for rate limit
-    sendRateLimitNotification(
-      projectPath,
-      authorUsername,
-      mrIid ? "merge_request" : issueIid ? "issue" : "unknown",
-      String(mrIid || issueIid || ""),
-    );
-
-    return c.text("rate-limited", 429);
-  }
-
-  logger.info(`${triggerPhrase} triggered`, {
-    project: projectPath,
-    author: authorUsername,
-    resourceType: mrIid ? "merge_request" : issueIid ? "issue" : "unknown",
-    resourceId: mrIid || issueIid,
-  });
-
-  // Determine branch ref
-  let ref = body.merge_request?.source_branch;
-
-  // For issues, create a branch
-  if (issueIid && !mrIid) {
-    try {
-      // Get project details for default branch
-      const project = await getProject(projectId);
-      const defaultBranch = project.default_branch || "main";
-
-      // Generate branch name with timestamp to ensure uniqueness
-      const timestamp = Date.now();
-      const branchName = `claude/issue-${issueIid}-${sanitizeBranchName(issueTitle || "")}-${timestamp}`;
-
-      logger.info("Creating branch for issue", {
-        issueIid,
-        branchName,
-        fromBranch: defaultBranch,
+  // Handle result
+  switch (result.status) {
+    case "ignored":
+    case "disabled":
+      return c.text(result.message || result.status);
+    case "rate-limited":
+      return c.text(
+        result.message || result.status,
+        (result.errorCode || 429) as any,
+      );
+    case "started":
+      return c.json({
+        status: result.status,
+        pipelineId: result.pipelineId,
+        branch: result.branch,
       });
-
-      // Try to create the branch
-      await createBranch(projectId, branchName, defaultBranch);
-      ref = branchName;
-    } catch (error) {
-      logger.error("Failed to create branch for issue", {
-        issueIid,
-        error: error instanceof Error ? error.message : error,
-      });
-
-      // Don't fall back to main - fail the request
-      return c.text("branch-creation-failed", 500);
-    }
-  } else if (!ref) {
-    // For merge requests without a source branch, fail
-    logger.error("No branch ref determined for merge request");
-    return c.text("no-branch-ref", 400);
-  }
-
-  // Extract the prompt after the trigger phrase
-  const promptMatch = note.match(
-    new RegExp(
-      `${triggerPhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(.*)`,
-      "is",
-    ),
-  );
-  const directPrompt = promptMatch ? promptMatch[1].trim() : "";
-
-  // Create minimal webhook payload for CI/CD variable (10KB limit)
-  const minimalPayload = {
-    object_kind: body.object_kind,
-    project: body.project,
-    user: body.user,
-    object_attributes: body.object_attributes
-      ? {
-          note: body.object_attributes.note,
-          noteable_type: body.object_attributes.noteable_type,
-        }
-      : undefined,
-    merge_request: body.merge_request
-      ? {
-          iid: body.merge_request.iid,
-          title: body.merge_request.title,
-          state: body.merge_request.state,
-        }
-      : undefined,
-    issue: body.issue
-      ? {
-          iid: body.issue.iid,
-          title: body.issue.title,
-          state: body.issue.state,
-        }
-      : undefined,
-  };
-
-  // Trigger pipeline with variables
-  const variables = {
-    CLAUDE_TRIGGER: "true",
-    CLAUDE_AUTHOR: authorUsername,
-    CLAUDE_RESOURCE_TYPE: mrIid ? "merge_request" : "issue",
-    CLAUDE_RESOURCE_ID: String(mrIid || issueIid || ""),
-    CLAUDE_NOTE: note,
-    CLAUDE_PROJECT_PATH: projectPath,
-    CLAUDE_BRANCH: ref,
-    TRIGGER_PHRASE: triggerPhrase,
-    DIRECT_PROMPT: directPrompt,
-    GITLAB_WEBHOOK_PAYLOAD: JSON.stringify(minimalPayload),
-  };
-
-  logger.info("Triggering pipeline", {
-    projectId,
-    ref,
-    variables: logger.maskSensitive(variables),
-  });
-
-  try {
-    const pipelineId = await triggerPipeline(projectId, ref, variables);
-
-    logger.info("Pipeline triggered successfully", {
-      pipelineId,
-      projectId,
-      ref,
-    });
-
-    // Send Discord notification (fire-and-forget)
-    sendPipelineNotification({
-      projectPath,
-      authorUsername,
-      resourceType: mrIid ? "merge_request" : issueIid ? "issue" : "unknown",
-      resourceId: String(mrIid || issueIid || ""),
-      branch: ref,
-      pipelineId,
-      gitlabUrl: process.env.GITLAB_URL || "https://gitlab.com",
-      triggerPhrase,
-      directPrompt,
-      issueTitle: issueTitle || undefined,
-    });
-
-    // Cancel old pipelines if configured
-    if (process.env.CANCEL_OLD_PIPELINES === "true") {
-      await cancelOldPipelines(projectId, pipelineId, ref);
-    }
-
-    return c.json({ status: "started", pipelineId, branch: ref });
-  } catch (error) {
-    logger.error("Failed to trigger pipeline", {
-      error: error instanceof Error ? error.message : error,
-      projectId,
-      ref,
-    });
-    return c.json({ error: "Failed to trigger pipeline" }, 500);
+    case "error":
+      return result.errorCode
+        ? c.text(result.message || "error", result.errorCode as any)
+        : c.json(
+            { error: result.message || "Failed to trigger pipeline" },
+            500,
+          );
+    default:
+      return c.json({ error: "Unknown status" }, 500);
   }
 });
 
-const port = Number(process.env.PORT) || 3000;
-logger.info(`GitLab Claude Webhook Server starting on port ${port}`);
+const port = Number(services.environment.get(EnvVar.PORT)) || 3000;
+services.logger.info(`GitLab Claude Webhook Server starting on port ${port}`);
 
 export default {
   port,
