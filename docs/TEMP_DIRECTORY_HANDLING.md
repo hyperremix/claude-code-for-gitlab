@@ -68,10 +68,6 @@ The temporary directory utility is currently used by:
 - `src/utils/temp-directory.ts` - Main utility providing cross-platform temp directory management
 - Webhook-triggered GitLab CI pipelines using the unified entrypoint approach
 
-### Shell Scripts
-
-- `scripts/setup-network-restrictions-unified.sh` - Uses inline temp directory logic for network setup
-
 ## Best Practices
 
 1. **Always use the utility** instead of hardcoding paths
