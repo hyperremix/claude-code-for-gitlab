@@ -1,5 +1,5 @@
-import type { IEnvironmentService } from "../../../src/interfaces";
-import { EnvVar } from "../../../src/types";
+import type { IEnvironmentService } from "../../../../src/interfaces";
+import { EnvVar } from "../../../../src/types";
 import type { ILoggerService } from "../interfaces";
 import type { LogContext, LogLevel } from "../types";
 

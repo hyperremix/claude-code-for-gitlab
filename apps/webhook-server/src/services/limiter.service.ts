@@ -1,5 +1,5 @@
-import type { IEnvironmentService } from "../../../src/interfaces";
-import { EnvVar } from "../../../src/types";
+import type { IEnvironmentService } from "../../../../src/interfaces";
+import { EnvVar } from "../../../../src/types";
 import type { ILimiterService, IRedisAdapterFactory } from "../interfaces";
 
 export class LimiterService implements ILimiterService {

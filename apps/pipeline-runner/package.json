@@ -1,5 +1,5 @@
 {
-  "name": "@hyperremix/claude-code-for-gitlab",
+  "name": "@hyperremix/claude-code-for-gitlab-pipeline-runner",
   "version": "1.0.0",
   "private": true,
   "packageManager": "bun@1.2.0",
@@ -8,14 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "format": "turbo run format",
-    "format:fix": "turbo run format:fix",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "build": "turbo run build",
-    "prepare": "husky"
+    "format": "biome format .",
+    "format:fix": "biome format --write .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.60",
@@ -26,7 +24,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.2",
+    "@types/bun": "1.2.11",
     "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.12",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "turbo": "^2.5.6",

@@ -1,5 +1,5 @@
 {
-  "name": "gitlab-claude-webhook",
+  "name": "@hyperremix/claude-code-for-gitlab-webhook-server",
   "version": "2.0.0",
   "description": "Lightweight GitLab webhook server for Claude pipeline triggers",
   "type": "module",
@@ -7,11 +7,11 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch src/index.ts",
-    "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
-    "lint:fix": "biome lint --write ."
+    "lint:fix": "biome lint --write .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@gitbeaker/rest": "^40.1.1",

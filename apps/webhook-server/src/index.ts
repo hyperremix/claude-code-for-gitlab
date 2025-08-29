@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
-import { createServiceContainer } from "../../src/services";
-import { EnvVar } from "../../src/types";
+import { createServiceContainer } from "../../../src/services";
+import { EnvVar } from "../../../src/types";
 import { DiscordService, LimiterService } from "./services";
 import { LoggerService } from "./services/logger.service";
 import { RedisAdapterFactory } from "./services/redis.factory";

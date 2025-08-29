@@ -3,8 +3,8 @@ import type {
   IGitLabAdapter,
   IHttpClient,
   ILoggerService,
-} from "../../src/interfaces";
-import { EnvVar } from "../../src/types";
+} from "../../../src/interfaces";
+import { EnvVar } from "../../../src/types";
 import type { IDiscordService, ILimiterService } from "./interfaces";
 import type { WebhookPayload } from "./types";
 

@@ -1,6 +1,6 @@
 import { createClient } from "redis";
-import type { IEnvironmentService } from "../../../src/interfaces";
-import { EnvVar } from "../../../src/types";
+import type { IEnvironmentService } from "../../../../src/interfaces";
+import { EnvVar } from "../../../../src/types";
 import type { IRedisAdapter, IRedisAdapterFactory } from "../interfaces";
 import { RedisAdapter } from "./redis.adapter";
 

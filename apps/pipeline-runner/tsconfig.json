@@ -29,10 +29,6 @@
     //   "@/*": ["*"],
     // }
   },
-  "exclude": ["node_modules"],
-  "files": [],
-  "references": [
-    { "path": "./apps/pipeline-runner" },
-    { "path": "./apps/webhook-server" }
-  ]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules"]
 }

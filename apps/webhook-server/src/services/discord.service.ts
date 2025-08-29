@@ -1,5 +1,8 @@
-import type { IEnvironmentService, IHttpClient } from "../../../src/interfaces";
-import { EnvVar } from "../../../src/types";
+import type {
+  IEnvironmentService,
+  IHttpClient,
+} from "../../../../src/interfaces";
+import { EnvVar } from "../../../../src/types";
 import type { IDiscordService, ILoggerService } from "../interfaces";
 import type { DiscordNotificationOptions } from "../types";
 
